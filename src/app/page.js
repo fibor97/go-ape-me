@@ -141,7 +141,7 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl max-w-md w-full p-6">
         <h2 className="text-2xl font-bold mb-4">Neue Kampagne erstellen</h2>
         
@@ -223,7 +223,7 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate }) => {
   if (!isOpen || !campaign) return null;
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl max-w-md w-full p-6">
         <h2 className="text-2xl font-bold mb-4">Kampagne unterstützen</h2>
         
