@@ -282,7 +282,7 @@ export default function GoApeMe() {
     chainName 
   } = useWalletConnection();
   
-  const { isDark } = useDarkMode();
+  useDarkMode(); // Initialize dark mode
   
   const [campaigns, setCampaigns] = useState(mockCampaigns);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
