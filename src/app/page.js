@@ -1,64 +1,46 @@
-// Manual deployment trigger
 'use client';
 
 import React, { useState } from 'react';
-import { Heart, Plus, Wallet, Clock, Users } from 'lucide-react';
-
-// Mock wallet connection hook
-const useWallet = () => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [address, setAddress] = useState('');
-  
-  const connect = () => {
-    setIsConnected(true);
-    setAddress('0x1234...5678');
-  };
-  
-  const disconnect = () => {
-    setIsConnected(false);
-    setAddress('');
-  };
-  
-  return { isConnected, address, connect, disconnect };
-};
+import { Heart, Plus, Wallet, Clock, Users, AlertCircle } from 'lucide-react';
+import { useWalletConnection } from './hooks/useWalletConnection';
 
 // Mock campaigns data
 const mockCampaigns = [
   {
     id: 1,
-    title: 'Rettung des Regenwaldes 🌳',
-    description: 'Hilf uns dabei, 1000 Hektar Regenwald zu schützen und zu erhalten.',
+    title: 'Save the Rainforest 🌳',
+    description: 'Help us protect and preserve 1000 hectares of rainforest.',
     creator: '0xABC...DEF',
     target: 50,
     raised: 32.5,
     backers: 127,
     daysLeft: 23,
     image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop',
-    category: 'Umwelt'
+    category: 'Environment'
   },
   {
     id: 2,
     title: 'Innovative DeFi App 💡',
-    description: 'Entwicklung einer revolutionären DeFi-Anwendung für die Apechain.',
+    description: 'Development of a revolutionary DeFi application for ApeChain.',
     creator: '0x123...456',
     target: 100,
     raised: 75.8,
     backers: 234,
     daysLeft: 12,
     image: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&h=300&fit=crop',
-    category: 'Technologie'
+    category: 'Technology'
   },
   {
     id: 3,
-    title: 'Lokales Tierheim Unterstützung 🐕',
-    description: 'Unterstütze unser lokales Tierheim bei der Versorgung von Straßentieren.',
+    title: 'Local Animal Shelter Support 🐕',
+    description: 'Support our local animal shelter in caring for stray animals.',
     creator: '0x789...ABC',
     target: 25,
     raised: 18.2,
     backers: 89,
     daysLeft: 45,
     image: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&h=300&fit=crop',
-    category: 'Soziales'
+    category: 'Social'
   }
 ];
 
@@ -89,7 +71,7 @@ const CampaignCard = ({ campaign, onDonate }) => {
             <span className="text-2xl font-bold text-purple-600">
               {campaign.raised} APE
             </span>
-            <span className="text-gray-500">von {campaign.target} APE</span>
+            <span className="text-gray-500">of {campaign.target} APE</span>
           </div>
           
           <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
@@ -102,11 +84,11 @@ const CampaignCard = ({ campaign, onDonate }) => {
           <div className="flex justify-between text-sm text-gray-600">
             <div className="flex items-center gap-1">
               <Users className="w-4 h-4" />
-              <span>{campaign.backers} Unterstützer</span>
+              <span>{campaign.backers} Supporters</span>
             </div>
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
-              <span>{campaign.daysLeft} Tage übrig</span>
+              <span>{campaign.daysLeft} Days left</span>
             </div>
           </div>
         </div>
@@ -116,7 +98,7 @@ const CampaignCard = ({ campaign, onDonate }) => {
           className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center justify-center gap-2"
         >
           <Heart className="w-5 h-5" />
-          Unterstützen
+          Support
         </button>
       </div>
     </div>
@@ -128,13 +110,13 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
     title: '',
     description: '',
     target: '',
-    category: 'Technologie',
+    category: 'Technology',
   });
   
   const handleSubmit = () => {
     if (formData.title && formData.description && formData.target) {
       onSubmit(formData);
-      setFormData({ title: '', description: '', target: '', category: 'Technologie' });
+      setFormData({ title: '', description: '', target: '', category: 'Technology' });
     }
   };
   
@@ -143,11 +125,11 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl max-w-md w-full p-6">
-        <h2 className="text-2xl font-bold mb-4">Neue Kampagne erstellen</h2>
+        <h2 className="text-2xl font-bold mb-4">Create New Campaign</h2>
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Titel</label>
+            <label className="block text-sm font-medium mb-1">Title</label>
             <input
               type="text"
               value={formData.title}
@@ -157,7 +139,7 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-1">Beschreibung</label>
+            <label className="block text-sm font-medium mb-1">Description</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
@@ -166,7 +148,7 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-1">Ziel (APE)</label>
+            <label className="block text-sm font-medium mb-1">Goal (APE)</label>
             <input
               type="number"
               value={formData.target}
@@ -176,17 +158,17 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-1">Kategorie</label>
+            <label className="block text-sm font-medium mb-1">Category</label>
             <select
               value={formData.category}
               onChange={(e) => setFormData({...formData, category: e.target.value})}
               className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
-              <option value="Technologie">Technologie</option>
-              <option value="Umwelt">Umwelt</option>
-              <option value="Soziales">Soziales</option>
-              <option value="Kunst">Kunst</option>
-              <option value="Bildung">Bildung</option>
+              <option value="Technology">Technology</option>
+              <option value="Environment">Environment</option>
+              <option value="Social">Social</option>
+              <option value="Art">Art</option>
+              <option value="Education">Education</option>
             </select>
           </div>
           
@@ -195,13 +177,13 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
               onClick={onClose}
               className="flex-1 py-3 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              Abbrechen
+              Cancel
             </button>
             <button
               onClick={handleSubmit}
               className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300"
             >
-              Erstellen
+              Create
             </button>
           </div>
         </div>
@@ -225,7 +207,7 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl max-w-md w-full p-6">
-        <h2 className="text-2xl font-bold mb-4">Kampagne unterstützen</h2>
+        <h2 className="text-2xl font-bold mb-4">Support Campaign</h2>
         
         <div className="mb-4">
           <h3 className="font-semibold text-lg">{campaign.title}</h3>
@@ -235,18 +217,18 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate }) => {
         <div className="mb-6">
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Bereits gesammelt:</span>
+              <span className="text-gray-600">Already raised:</span>
               <span className="font-semibold">{campaign.raised} APE</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Ziel:</span>
+              <span className="text-gray-600">Goal:</span>
               <span className="font-semibold">{campaign.target} APE</span>
             </div>
           </div>
         </div>
         
         <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">Spendenbetrag (APE)</label>
+          <label className="block text-sm font-medium mb-2">Donation Amount (APE)</label>
           <input
             type="number"
             value={amount}
@@ -261,7 +243,7 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate }) => {
             onClick={onClose}
             className="flex-1 py-3 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            Abbrechen
+            Cancel
           </button>
           <button
             onClick={handleDonate}
@@ -269,7 +251,7 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate }) => {
             className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <Heart className="w-5 h-5" />
-            Spenden
+            Donate
           </button>
         </div>
       </div>
@@ -278,16 +260,27 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate }) => {
 };
 
 export default function GoApeMe() {
-  const { isConnected, address, connect, disconnect } = useWallet();
+  const { 
+    isConnected, 
+    address, 
+    formattedAddress, 
+    mobileAddress, 
+    connect, 
+    disconnect, 
+    isCorrectNetwork, 
+    switchToApeChain,
+    chainName 
+  } = useWalletConnection();
+  
   const [campaigns, setCampaigns] = useState(mockCampaigns);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
-  const [filter, setFilter] = useState('Alle');
+  const [filter, setFilter] = useState('All');
   
-  const categories = ['Alle', 'Technologie', 'Umwelt', 'Soziales', 'Kunst', 'Bildung'];
+  const categories = ['All', 'Technology', 'Environment', 'Social', 'Art', 'Education'];
   
-  const filteredCampaigns = filter === 'Alle' 
+  const filteredCampaigns = filter === 'All' 
     ? campaigns 
     : campaigns.filter(campaign => campaign.category === filter);
   
@@ -343,13 +336,22 @@ export default function GoApeMe() {
             </div>
             
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+              {/* Network Warning */}
+              {isConnected && !isCorrectNetwork && (
+                <div className="flex items-center gap-1 bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
+                  <AlertCircle className="w-3 h-3" />
+                  <span className="hidden sm:inline">Wrong Network ({chainName})</span>
+                  <span className="sm:hidden">⚠️</span>
+                </div>
+              )}
+              
               {isConnected && (
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
                   className="hidden sm:flex bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-300 items-center gap-2"
                 >
                   <Plus className="w-5 h-5" />
-                  Kampagne erstellen
+                  Create Campaign
                 </button>
               )}
               
@@ -362,16 +364,26 @@ export default function GoApeMe() {
                 </button>
               )}
               
+              {/* Network Switch Button */}
+              {isConnected && !isCorrectNetwork && (
+                <button
+                  onClick={switchToApeChain}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm transition-colors"
+                >
+                  Switch to ApeChain
+                </button>
+              )}
+              
               <button
                 onClick={isConnected ? disconnect : connect}
                 className="flex items-center gap-2 bg-gray-800 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm sm:text-base whitespace-nowrap"
               >
                 <Wallet className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                 <span className="hidden sm:inline">
-                  {isConnected ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Wallet verbinden'}
+                  {isConnected ? formattedAddress : 'Connect Wallet'}
                 </span>
                 <span className="sm:hidden">
-                  {isConnected ? `${address.slice(0, 4)}...` : 'Connect'}
+                  {isConnected ? mobileAddress : 'Connect'}
                 </span>
               </button>
             </div>
@@ -383,27 +395,27 @@ export default function GoApeMe() {
       <section className="py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-5xl font-bold text-gray-800 mb-6">
-            Crowdfunding auf der <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Apechain</span>
+            Crowdfunding on <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">ApeChain</span>
           </h2>
           <p className="text-xl text-gray-600 mb-8">
-            Dezentral, transparent und sicher. Unterstütze innovative Projekte oder starte deine eigene Kampagne.
+            Decentralized, transparent and secure. Support innovative projects or start your own campaign.
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
             <div className="bg-white p-6 rounded-xl shadow-lg">
               <div className="text-3xl mb-4">💰</div>
               <h3 className="text-2xl font-bold text-purple-600 mb-2">{totalRaised.toFixed(1)} APE</h3>
-              <p className="text-gray-600">Gesamt gesammelt</p>
+              <p className="text-gray-600">Total Raised</p>
             </div>
             <div className="bg-white p-6 rounded-xl shadow-lg">
               <div className="text-3xl mb-4">👥</div>
               <h3 className="text-2xl font-bold text-purple-600 mb-2">{totalBackers}</h3>
-              <p className="text-gray-600">Unterstützer</p>
+              <p className="text-gray-600">Supporters</p>
             </div>
             <div className="bg-white p-6 rounded-xl shadow-lg">
               <div className="text-3xl mb-4">🚀</div>
               <h3 className="text-2xl font-bold text-purple-600 mb-2">{campaigns.length}</h3>
-              <p className="text-gray-600">Aktive Kampagnen</p>
+              <p className="text-gray-600">Active Campaigns</p>
             </div>
           </div>
         </div>
@@ -413,7 +425,7 @@ export default function GoApeMe() {
       <section className="py-16 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Aktuelle Kampagnen</h2>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Current Campaigns</h2>
             
             <div className="flex flex-wrap gap-2">
               {categories.map(category => (
@@ -450,10 +462,10 @@ export default function GoApeMe() {
           <div className="text-4xl mb-4">🦍</div>
           <h3 className="text-2xl font-bold mb-4">Go-Ape-Me</h3>
           <p className="text-gray-400 mb-6">
-            Die dezentrale Crowdfunding-Plattform auf der Apechain
+            The decentralized crowdfunding platform on ApeChain
           </p>
           <div className="flex justify-center gap-6">
-            <span className="text-sm text-gray-500">Built with ❤️ on Apechain</span>
+            <span className="text-sm text-gray-500">Built with ❤️ on ApeChain</span>
           </div>
         </div>
       </footer>
