@@ -1,7 +1,6 @@
 'use client';
 
-
-import { WagmiProvider, createConfig, http } from 'wagmi';
+import { WagmiProvider, http } from 'wagmi';
 import { mainnet, arbitrum } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit';
@@ -43,9 +42,7 @@ export function WalletProvider({ children }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-       <RainbowKitProvider
-          initialChain={apeChain}
-        >
+        <RainbowKitProvider initialChain={apeChain}>
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>
