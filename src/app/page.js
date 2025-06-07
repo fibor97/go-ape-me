@@ -1,3 +1,4 @@
+// Manual deployment trigger
 'use client';
 
 import React, { useState } from 'react';
