@@ -76,15 +76,14 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
   };
   
   const handleClose = () => {
-    if (!isSubmitting) {
-      setFormData({ title: '', description: '', target: '', category: 'Technology' });
-      setSelectedImage(null);
-      setImagePreview(null);
-      setUploadStatus(null);
-      setUploadMessage('');
-      setIsSubmitting(false);
-      onClose();
-    }
+    // Cancel immer erlauben - auch während Upload
+    setFormData({ title: '', description: '', target: '', category: 'Technology' });
+    setSelectedImage(null);
+    setImagePreview(null);
+    setUploadStatus(null);
+    setUploadMessage('');
+    setIsSubmitting(false);
+    onClose();
   };
 
   const handleRetry = () => {
@@ -101,8 +100,8 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
         <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
           Create New Campaign
         </h2>
@@ -190,10 +189,9 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
           <div className="flex gap-3 pt-4">
             <button
               onClick={handleClose}
-              disabled={isSubmitting}
-              className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
             >
-              {isSubmitting ? 'Creating...' : 'Cancel'}
+              Cancel
             </button>
             
             <LoadingButton
@@ -213,4 +211,4 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
   );
 };
 
-export default CreateCampaignModal; 
+export default CreateCampaignModal;
