@@ -53,20 +53,27 @@ export const useCampaignManager = () => {
   // Speichere Kampagnen in localStorage
   const saveCampaigns = useCallback((campaignsToSave) => {
     try {
-      localStorage.setItem(CAMPAIGNS_STORAGE_KEY, JSON.stringify(campaignsToSave));
+      const dataToSave = JSON.stringify(campaignsToSave);
+      localStorage.setItem(CAMPAIGNS_STORAGE_KEY, dataToSave);
+      console.log('💾 Campaigns saved to localStorage:', campaignsToSave.length, 'campaigns');
+      console.log('🔍 localStorage content:', dataToSave.substring(0, 100) + '...');
     } catch (error) {
-      console.error('Failed to save campaigns:', error);
+      console.error('❌ Failed to save campaigns:', error);
     }
   }, []);
 
   // Erstelle neue Kampagne
   const createCampaign = useCallback(async (campaignData, creatorAddress) => {
     try {
+      console.log('📝 Creating campaign with data:', campaignData);
+      
       // Upload zu IPFS
       const ipfsResult = await uploadCampaignData({
         ...campaignData,
         creator: creatorAddress
       });
+
+      console.log('✅ IPFS Upload successful:', ipfsResult);
 
       // Erstelle lokale Kampagne
       const newCampaign = {
@@ -90,13 +97,19 @@ export const useCampaignManager = () => {
         isValid: true
       };
 
+      console.log('📋 New campaign object:', newCampaign);
+
       const updatedCampaigns = [newCampaign, ...campaigns];
+      console.log('💾 Saving campaigns to localStorage:', updatedCampaigns);
+      
       setCampaigns(updatedCampaigns);
       saveCampaigns(updatedCampaigns);
 
+      console.log('✅ Campaign saved locally!');
+      
       return { success: true, campaign: newCampaign, ipfsResult };
     } catch (error) {
-      console.error('Failed to create campaign:', error);
+      console.error('❌ Failed to create campaign:', error);
       throw error;
     }
   }, [campaigns, uploadCampaignData, saveCampaigns]);
