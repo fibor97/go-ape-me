@@ -13,8 +13,9 @@
 # testing
 /coverage
 
-# next.js
-/.next/
+# next.js - Modified to allow export-detail.json
+/.next/*
+!/.next/export-detail.json
 /out/
 
 # production
