@@ -1,5 +1,8 @@
 import { create } from '@web3-storage/w3up-client';
 
+// ✅ Node.js Runtime erzwingen für Edge-Kompatibilität
+export const runtime = 'nodejs';
+
 let storachaClient = null;
 let isClientReady = false;
 
@@ -16,8 +19,12 @@ async function initStorachaClient() {
     console.log('📧 Logging in backend...');
     await storachaClient.login('rs@ds2.de');
     
-    // Verwende deine Space DID
+    // Verwende deine Space DID aus Umgebungsvariable
     const spaceDid = process.env.STORACHA_SPACE_DID;
+    if (!spaceDid) {
+      throw new Error('STORACHA_SPACE_DID environment variable is required');
+    }
+    
     console.log('🎯 Setting space DID:', spaceDid);
     
     // Warte kurz für den Login
@@ -49,7 +56,16 @@ export async function POST(request) {
   try {
     console.log('📝 Received campaign upload request');
     
+    // Validiere Input
     const campaignData = await request.json();
+    
+    if (!campaignData.title || !campaignData.description || !campaignData.target) {
+      return Response.json({ 
+        success: false, 
+        error: 'Missing required fields: title, description, target' 
+      }, { status: 400 });
+    }
+    
     console.log('📋 Campaign:', campaignData.title);
     
     // Get backend client
@@ -67,16 +83,20 @@ export async function POST(request) {
       }
     }
 
-    // Create metadata
+    // Create metadata mit besserer Struktur
     const metadata = {
       title: campaignData.title,
       description: campaignData.description,
-      category: campaignData.category,
-      target: campaignData.target,
+      category: campaignData.category || 'Technology',
+      target: parseFloat(campaignData.target),
       creator: campaignData.creator,
       timestamp: Date.now(),
       version: '1.0',
-      platform: 'go-ape-me'
+      platform: 'go-ape-me',
+      // Zusätzliche Metadaten
+      createdAt: new Date().toISOString(),
+      status: 'active',
+      type: 'crowdfunding-campaign'
     };
 
     const metadataJson = JSON.stringify(metadata, null, 2);
@@ -92,14 +112,21 @@ export async function POST(request) {
     return Response.json({ 
       success: true, 
       cid: cid.toString(),
-      url: `https://${cid.toString()}.ipfs.w3s.link`
+      url: `https://${cid.toString()}.ipfs.w3s.link`,
+      metadata: metadata
     });
     
   } catch (error) {
     console.error('❌ Backend upload failed:', error);
+    
+    // Bessere Error-Behandlung
+    const errorMessage = error.message || 'Unknown error occurred';
+    const statusCode = error.name === 'ValidationError' ? 400 : 500;
+    
     return Response.json({ 
       success: false, 
-      error: error.message 
-    }, { status: 500 });
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: statusCode });
   }
 }
