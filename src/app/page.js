@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { Heart, Plus, Wallet, Clock, Users, AlertCircle } from 'lucide-react';
 import { useWalletConnection } from './hooks/useWalletConnection';
 import { useStoracha } from './hooks/useStoracha';
-import StorachaSetup from '../components/StorachaSetup';
 
 // Mock campaigns data
 const mockCampaigns = [
@@ -47,6 +46,7 @@ const mockCampaigns = [
 ];
 
 // Dark Mode Hook (permanent dark)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const useDarkMode = () => {
   useEffect(() => {
     // Dark Mode immer aktiviert
@@ -283,7 +283,7 @@ export default function GoApeMe() {
     switchToApeChain,
     chainName 
   } = useWalletConnection();
-  const { uploadCampaignData, getCampaignData, isLoading: storageLoading } = useStoracha(); // ← DIESE ZEILE HINZUFÜGEN
+ const { uploadCampaignData } = useStoracha();
   
   const [campaigns, setCampaigns] = useState(mockCampaigns);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -421,13 +421,6 @@ export default function GoApeMe() {
           </div>
         </div>
       </header>
-      
-      {/* TEMPORÄRER SETUP - später entfernen */}
-      <div className="max-w-4xl mx-auto px-4 pt-4">
-        <StorachaSetup />
-      </div>
-      
-      {/* Hero Section */}
 
       {/* Hero Section */}
       <section className="py-20 px-4">

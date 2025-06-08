@@ -14,7 +14,7 @@ async function initStorachaClient() {
     
     // Login mit deiner Email (einmalig)
     console.log('📧 Logging in backend...');
-    const account = await storachaClient.login('rs@ds2.de');
+    await storachaClient.login('rs@ds2.de');
     
     // Verwende deine Space DID
     const spaceDid = process.env.STORACHA_SPACE_DID;
