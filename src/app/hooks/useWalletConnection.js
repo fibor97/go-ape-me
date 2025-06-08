@@ -11,6 +11,11 @@ export function useWalletConnection() {
   const { openConnectModal } = useConnectModal();
   
   const [isCorrectNetwork, setIsCorrectNetwork] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+useEffect(() => {
+  setMounted(true);
+}, []);
 
   useEffect(() => {
     setIsCorrectNetwork(chain?.id === APECHAIN_ID);
@@ -43,17 +48,17 @@ export function useWalletConnection() {
     : '';
 
   return {
-    isConnected,
-    address,
-    formattedAddress,
-    mobileAddress,
-    chain,
-    isCorrectNetwork,
-    connect,
-    disconnect: disconnectWallet,
-    switchToApeChain,
-    chainName: chain?.name || 'Unknown',
-    chainId: chain?.id,
-    isApeChain: chain?.id === APECHAIN_ID,
-  };
+  isConnected: mounted ? isConnected : false,
+  address: mounted ? address : undefined,
+  formattedAddress,
+  mobileAddress,
+  chain,
+  isCorrectNetwork: mounted ? isCorrectNetwork : false,
+  connect,
+  disconnect: disconnectWallet,
+  switchToApeChain,
+  chainName: chain?.name || 'Unknown',
+  chainId: chain?.id,
+  isApeChain: chain?.id === APECHAIN_ID,
+};
 }

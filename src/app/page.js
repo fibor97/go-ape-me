@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, Plus, Wallet, Clock, Users, AlertCircle } from 'lucide-react';
 import { useWalletConnection } from './hooks/useWalletConnection';
+import { useStoracha } from './hooks/useStoracha';
+import StorachaSetup from '../components/StorachaSetup';
 
 // Mock campaigns data
 const mockCampaigns = [
@@ -281,8 +283,7 @@ export default function GoApeMe() {
     switchToApeChain,
     chainName 
   } = useWalletConnection();
-  
-  useDarkMode(); // Initialize dark mode
+  const { uploadCampaignData, getCampaignData, isLoading: storageLoading } = useStoracha(); // ← DIESE ZEILE HINZUFÜGEN
   
   const [campaigns, setCampaigns] = useState(mockCampaigns);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -296,7 +297,15 @@ export default function GoApeMe() {
     ? campaigns 
     : campaigns.filter(campaign => campaign.category === filter);
   
-  const handleCreateCampaign = (campaignData) => {
+  const handleCreateCampaign = async (campaignData) => {
+  try {
+    // Upload zu IPFS via Storacha
+    const ipfsResult = await uploadCampaignData({
+      ...campaignData,
+      creator: address
+    });
+
+    // Erstelle lokale Kampagne mit IPFS CID
     const newCampaign = {
       id: campaigns.length + 1,
       ...campaignData,
@@ -305,12 +314,22 @@ export default function GoApeMe() {
       backers: 0,
       daysLeft: 30,
       target: parseFloat(campaignData.target),
-      image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&h=300&fit=crop',
+      // IPFS Integration:
+      ipfsCid: ipfsResult.cid,
+      ipfsUrl: ipfsResult.url
     };
     
     setCampaigns([newCampaign, ...campaigns]);
     setIsCreateModalOpen(false);
-  };
+    
+    // Success Message
+    alert(`Campaign saved to IPFS! CID: ${ipfsResult.cid}`);
+  } catch (error) {
+    console.error('Failed to create campaign:', error);
+    alert('Failed to save campaign to IPFS: ' + error.message);
+  }
+};
   
   const handleDonate = (campaignId, amount) => {
     setCampaigns(campaigns.map(campaign => 
@@ -403,6 +422,13 @@ export default function GoApeMe() {
         </div>
       </header>
       
+      {/* TEMPORÄRER SETUP - später entfernen */}
+      <div className="max-w-4xl mx-auto px-4 pt-4">
+        <StorachaSetup />
+      </div>
+      
+      {/* Hero Section */}
+
       {/* Hero Section */}
       <section className="py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
