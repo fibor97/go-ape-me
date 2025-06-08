@@ -28,25 +28,22 @@ const nextConfig = {
     ],
   },
 
-  // Environment Variables
-  env: {
-    CUSTOM_KEY: 'go-ape-me',
-  },
-
-  // Output für Vercel
-  output: 'standalone',
-
   // React Strict Mode
   reactStrictMode: true,
 
-  // ESLint während Build ignorieren (nur für Deployment)
+  // ESLint während Build ignorieren
   eslint: {
     ignoreDuringBuilds: true,
   },
 
-  // TypeScript Errors während Build ignorieren
+  // TypeScript Errors während Build ignorieren  
   typescript: {
     ignoreBuildErrors: true,
+  },
+
+  // Turbopack deaktivieren für Kompatibilität
+  experimental: {
+    turbo: false,
   },
 };
 
