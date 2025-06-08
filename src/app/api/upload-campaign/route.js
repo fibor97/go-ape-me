@@ -1,8 +1,7 @@
 import { create } from '@web3-storage/w3up-client';
 
-// ✅ Node.js Runtime erzwingen für Edge-Kompatibilität
+// ✅ Node.js Runtime erzwingen
 export const runtime = 'nodejs';
-
 export const dynamic = 'force-dynamic';
 
 let storachaClient = null;
@@ -102,12 +101,30 @@ export async function POST(request) {
     };
 
     const metadataJson = JSON.stringify(metadata, null, 2);
-    const file = new File([metadataJson], `campaign-${Date.now()}.json`, {
-      type: 'application/json'
-    });
+    
+    // ✅ FIX: Node.js-kompatible File-Erstellung
+    // Verwende Buffer statt File() für Node.js
+    const fileBuffer = Buffer.from(metadataJson, 'utf8');
+    const fileName = `campaign-${Date.now()}.json`;
+    
+    // Storacha erwartet ein File-like Object - erstelle eines
+    const fileObject = {
+      name: fileName,
+      type: 'application/json',
+      size: fileBuffer.length,
+      stream: () => {
+        const { Readable } = require('stream');
+        return Readable.from(fileBuffer);
+      },
+      // Node.js File-Interface für Storacha
+      arrayBuffer: () => Promise.resolve(fileBuffer.buffer.slice(
+        fileBuffer.byteOffset, 
+        fileBuffer.byteOffset + fileBuffer.byteLength
+      )),
+    };
 
     console.log('📤 Uploading to IPFS...');
-    const cid = await client.uploadFile(file);
+    const cid = await client.uploadFile(fileObject);
     
     console.log('✅ Upload successful! CID:', cid.toString());
     
