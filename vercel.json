@@ -17,6 +17,6 @@
     }
   },
   "env": {
-    "STORACHA_SPACE_DID": "@storacha_space_did"
+    "STORACHA_SPACE_DID": "STORACHA_SPACE_DID"
   }
 }
