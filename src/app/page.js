@@ -1,207 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Heart, Plus, Wallet, Clock, Users, AlertCircle } from 'lucide-react';
+import { Heart, Plus, Wallet, Clock, Users, AlertCircle, Trash2, Download, Upload } from 'lucide-react';
 import { useWalletConnection } from './hooks/useWalletConnection';
-import { useStoracha } from './hooks/useStoracha';
-
-// Mock campaigns data
-const mockCampaigns = [
-  {
-    id: 1,
-    title: 'Save the Rainforest 🌳',
-    description: 'Help us protect and preserve 1000 hectares of rainforest.',
-    creator: '0xABC...DEF',
-    target: 50,
-    raised: 32.5,
-    backers: 127,
-    daysLeft: 23,
-    image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop',
-    category: 'Environment'
-  },
-  {
-    id: 2,
-    title: 'Innovative DeFi App 💡',
-    description: 'Development of a revolutionary DeFi application for ApeChain.',
-    creator: '0x123...456',
-    target: 100,
-    raised: 75.8,
-    backers: 234,
-    daysLeft: 12,
-    image: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&h=300&fit=crop',
-    category: 'Technology'
-  },
-  {
-    id: 3,
-    title: 'Local Animal Shelter Support 🐕',
-    description: 'Support our local animal shelter in caring for stray animals.',
-    creator: '0x789...ABC',
-    target: 25,
-    raised: 18.2,
-    backers: 89,
-    daysLeft: 45,
-    image: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&h=300&fit=crop',
-    category: 'Social'
-  }
-];
+import { useCampaignManager } from './hooks/useCampaignManager';
+import CreateCampaignModal from '../components/CreateCampaignModal';
+import CampaignCard from '../components/CampaignCard';
+import WalletModal from '../components/WalletModal';
 
 // Dark Mode Hook (permanent dark)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const useDarkMode = () => {
   useEffect(() => {
-    // Dark Mode immer aktiviert
     document.documentElement.classList.add('dark');
   }, []);
-
   return { isDark: true };
-};
-
-const CampaignCard = ({ campaign, onDonate }) => {
-  const progressPercentage = (campaign.raised / campaign.target) * 100;
-  
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-      <div className="relative">
-        <img 
-          src={campaign.image} 
-          alt={campaign.title}
-          className="w-full h-48 object-cover"
-        />
-        <div className="absolute top-4 left-4">
-          <span className="bg-purple-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-            {campaign.category}
-          </span>
-        </div>
-      </div>
-      
-      <div className="p-6">
-        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">{campaign.title}</h3>
-        <p className="text-gray-600 dark:text-gray-400 mb-4">{campaign.description}</p>
-        
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-              {campaign.raised} APE
-            </span>
-            <span className="text-gray-500 dark:text-gray-400">of {campaign.target} APE</span>
-          </div>
-          
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-3">
-            <div 
-              className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-300"
-              style={{ width: `${Math.min(progressPercentage, 100)}%` }}
-            ></div>
-          </div>
-          
-          <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-            <div className="flex items-center gap-1">
-              <Users className="w-4 h-4" />
-              <span>{campaign.backers} Supporters</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              <span>{campaign.daysLeft} Days left</span>
-            </div>
-          </div>
-        </div>
-        
-        <button 
-          onClick={() => onDonate(campaign)}
-          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center justify-center gap-2"
-        >
-          <Heart className="w-5 h-5" />
-          Support
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    target: '',
-    category: 'Technology',
-  });
-  
-  const handleSubmit = () => {
-    if (formData.title && formData.description && formData.target) {
-      onSubmit(formData);
-      setFormData({ title: '', description: '', target: '', category: 'Technology' });
-    }
-  };
-  
-  if (!isOpen) return null;
-  
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
-        <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Create New Campaign</h2>
-        
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-800 dark:text-gray-200">Title</label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({...formData, title: e.target.value})}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-800 dark:text-gray-200">Description</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 h-24 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-800 dark:text-gray-200">Goal (APE)</label>
-            <input
-              type="number"
-              value={formData.target}
-              onChange={(e) => setFormData({...formData, target: e.target.value})}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-800 dark:text-gray-200">Category</label>
-            <select
-              value={formData.category}
-              onChange={(e) => setFormData({...formData, category: e.target.value})}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-            >
-              <option value="Technology">Technology</option>
-              <option value="Environment">Environment</option>
-              <option value="Social">Social</option>
-              <option value="Art">Art</option>
-              <option value="Education">Education</option>
-            </select>
-          </div>
-          
-          <div className="flex gap-3 pt-4">
-            <button
-              onClick={onClose}
-              className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300"
-            >
-              Create
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 const DonateModal = ({ isOpen, campaign, onClose, onDonate }) => {
@@ -271,6 +83,98 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate }) => {
   );
 };
 
+const AdminPanel = ({ onClearAll, onImportIPFS, statistics }) => {
+  const [showPanel, setShowPanel] = useState(false);
+  const [importCid, setImportCid] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+
+  const handleImport = async () => {
+    if (!importCid.trim()) return;
+    
+    setIsImporting(true);
+    try {
+      await onImportIPFS(importCid.trim());
+      setImportCid('');
+      alert('Campaign imported successfully!');
+    } catch (error) {
+      alert('Failed to import campaign: ' + error.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  if (!showPanel) {
+    return (
+      <button
+        onClick={() => setShowPanel(true)}
+        className="fixed bottom-4 right-4 bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-full shadow-lg transition-colors"
+        title="Admin Panel"
+      >
+        ⚙️
+      </button>
+    );
+  }
+
+  return (
+    <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 min-w-[300px]">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100">Admin Panel</h3>
+        <button 
+          onClick={() => setShowPanel(false)}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Statistics */}
+      <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+        <div>Total Campaigns: {statistics.totalCampaigns}</div>
+        <div>IPFS Campaigns: {statistics.totalIPFSCampaigns}</div>
+        <div>Total Raised: {statistics.totalRaised.toFixed(1)} APE</div>
+      </div>
+
+      {/* Import from IPFS */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2 text-gray-800 dark:text-gray-200">
+          Import Campaign from IPFS
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={importCid}
+            onChange={(e) => setImportCid(e.target.value)}
+            placeholder="IPFS CID..."
+            className="flex-1 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+          />
+          <button
+            onClick={handleImport}
+            disabled={!importCid.trim() || isImporting}
+            className="px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50 flex items-center gap-1"
+          >
+            <Download className="w-4 h-4" />
+            {isImporting ? 'Importing...' : 'Import'}
+          </button>
+        </div>
+      </div>
+
+      {/* Clear All */}
+      <button
+        onClick={() => {
+          if (confirm('Are you sure you want to delete all campaigns? This cannot be undone.')) {
+            onClearAll();
+            setShowPanel(false);
+          }
+        }}
+        className="w-full px-3 py-2 bg-red-500 text-white rounded text-sm hover:bg-red-600 flex items-center justify-center gap-2"
+      >
+        <Trash2 className="w-4 h-4" />
+        Clear All Campaigns
+      </button>
+    </div>
+  );
+};
+
 export default function GoApeMe() {
   const { 
     isConnected, 
@@ -283,11 +187,21 @@ export default function GoApeMe() {
     switchToApeChain,
     chainName 
   } = useWalletConnection();
- const { uploadCampaignData } = useStoracha();
+
+  const {
+    campaigns,
+    isLoading,
+    statistics,
+    createCampaign,
+    deleteCampaign,
+    addDonation,
+    loadCampaignFromIPFS,
+    clearAllCampaigns
+  } = useCampaignManager();
   
-  const [campaigns, setCampaigns] = useState(mockCampaigns);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [filter, setFilter] = useState('All');
   
@@ -298,60 +212,49 @@ export default function GoApeMe() {
     : campaigns.filter(campaign => campaign.category === filter);
   
   const handleCreateCampaign = async (campaignData) => {
-  try {
-    // Upload zu IPFS via Storacha
-    const ipfsResult = await uploadCampaignData({
-      ...campaignData,
-      creator: address
-    });
-
-    // Erstelle lokale Kampagne mit IPFS CID
-    const newCampaign = {
-      id: campaigns.length + 1,
-      ...campaignData,
-      creator: address,
-      raised: 0,
-      backers: 0,
-      daysLeft: 30,
-      target: parseFloat(campaignData.target),
-      image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&h=300&fit=crop',
-      // IPFS Integration:
-      ipfsCid: ipfsResult.cid,
-      ipfsUrl: ipfsResult.url
-    };
-    
-    setCampaigns([newCampaign, ...campaigns]);
-    setIsCreateModalOpen(false);
-    
-    // Success Message
-    alert(`Campaign saved to IPFS! CID: ${ipfsResult.cid}`);
-  } catch (error) {
-    console.error('Failed to create campaign:', error);
-    alert('Failed to save campaign to IPFS: ' + error.message);
-  }
-};
+    try {
+      const result = await createCampaign(campaignData, address);
+      
+      // Modal schließt sich automatisch über das Modal selbst
+      console.log('Campaign created successfully:', result);
+    } catch (error) {
+      console.error('Failed to create campaign:', error);
+      throw error; // Re-throw für Modal Error Handling
+    }
+  };
   
   const handleDonate = (campaignId, amount) => {
-    setCampaigns(campaigns.map(campaign => 
-      campaign.id === campaignId 
-        ? { 
-            ...campaign, 
-            raised: campaign.raised + amount,
-            backers: campaign.backers + 1
-          }
-        : campaign
-    ));
-    setIsDonateModalOpen(false);
-    setSelectedCampaign(null);
+    try {
+      addDonation(campaignId, amount);
+      setIsDonateModalOpen(false);
+      setSelectedCampaign(null);
+    } catch (error) {
+      console.error('Failed to process donation:', error);
+      alert('Failed to process donation: ' + error.message);
+    }
+  };
+
+  const handleDeleteCampaign = (campaignId) => {
+    try {
+      deleteCampaign(campaignId);
+    } catch (error) {
+      console.error('Failed to delete campaign:', error);
+      alert('Failed to delete campaign: ' + error.message);
+    }
   };
   
   const openDonateModal = (campaign) => {
     setSelectedCampaign(campaign);
     setIsDonateModalOpen(true);
   };
-  
-  const totalRaised = campaigns.reduce((sum, campaign) => sum + campaign.raised, 0);
-  const totalBackers = campaigns.reduce((sum, campaign) => sum + campaign.backers, 0);
+
+  const handleImportFromIPFS = async (cid) => {
+    return loadCampaignFromIPFS(cid);
+  };
+
+  const handleClearAll = () => {
+    clearAllCampaigns();
+  };
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-gray-900 dark:via-purple-900 dark:to-blue-900 transition-colors duration-300">
@@ -406,7 +309,7 @@ export default function GoApeMe() {
               )}
               
               <button
-                onClick={isConnected ? disconnect : connect}
+                onClick={isConnected ? () => setIsWalletModalOpen(true) : connect}
                 className="flex items-center gap-2 bg-gray-800 dark:bg-gray-700 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base whitespace-nowrap"
               >
                 <Wallet className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
@@ -435,17 +338,23 @@ export default function GoApeMe() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg transition-colors duration-300">
               <div className="text-3xl mb-4">💰</div>
-              <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-2">{totalRaised.toFixed(1)} APE</h3>
+              <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-2">
+                {statistics.totalRaised.toFixed(1)} APE
+              </h3>
               <p className="text-gray-600 dark:text-gray-400">Total Raised</p>
             </div>
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg transition-colors duration-300">
               <div className="text-3xl mb-4">👥</div>
-              <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-2">{totalBackers}</h3>
+              <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-2">
+                {statistics.totalBackers}
+              </h3>
               <p className="text-gray-600 dark:text-gray-400">Supporters</p>
             </div>
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg transition-colors duration-300">
               <div className="text-3xl mb-4">🚀</div>
-              <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-2">{campaigns.length}</h3>
+              <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-2">
+                {statistics.totalCampaigns}
+              </h3>
               <p className="text-gray-600 dark:text-gray-400">Active Campaigns</p>
             </div>
           </div>
@@ -456,7 +365,9 @@ export default function GoApeMe() {
       <section className="py-16 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4 md:mb-0">Current Campaigns</h2>
+            <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4 md:mb-0">
+              {isLoading ? 'Loading Campaigns...' : 'Current Campaigns'}
+            </h2>
             
             <div className="flex flex-wrap gap-2">
               {categories.map(category => (
@@ -475,15 +386,62 @@ export default function GoApeMe() {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredCampaigns.map(campaign => (
-              <CampaignCard 
-                key={campaign.id} 
-                campaign={campaign} 
-                onDonate={openDonateModal}
-              />
-            ))}
-          </div>
+          {/* Loading State */}
+          {isLoading && (
+            <div className="flex justify-center items-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+            </div>
+          )}
+
+          {/* No Campaigns State */}
+          {!isLoading && campaigns.length === 0 && (
+            <div className="text-center py-20">
+              <div className="text-6xl mb-4">🦍</div>
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                No campaigns yet
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                {isConnected ? 'Be the first to create a campaign!' : 'Connect your wallet to create the first campaign!'}
+              </p>
+              {isConnected && (
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center gap-2 mx-auto"
+                >
+                  <Plus className="w-5 h-5" />
+                  Create First Campaign
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Campaigns Grid */}
+          {!isLoading && filteredCampaigns.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredCampaigns.map(campaign => (
+                <CampaignCard 
+                  key={campaign.id} 
+                  campaign={campaign} 
+                  onDonate={openDonateModal}
+                  onDelete={handleDeleteCampaign}
+                  currentUserAddress={address}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Filtered Empty State */}
+          {!isLoading && campaigns.length > 0 && filteredCampaigns.length === 0 && (
+            <div className="text-center py-20">
+              <div className="text-4xl mb-4">🔍</div>
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                No campaigns in "{filter}" category
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Try selecting a different category or create a new campaign.
+              </p>
+            </div>
+          )}
         </div>
       </section>
       
@@ -516,6 +474,24 @@ export default function GoApeMe() {
           setSelectedCampaign(null);
         }}
         onDonate={handleDonate}
+      />
+
+      {/* Wallet Modal */}
+      <WalletModal
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
+        onDisconnect={disconnect}
+        address={address}
+        formattedAddress={formattedAddress}
+        chainName={chainName}
+        isCorrectNetwork={isCorrectNetwork}
+      />
+
+      {/* Admin Panel */}
+      <AdminPanel 
+        onClearAll={handleClearAll}
+        onImportIPFS={handleImportFromIPFS}
+        statistics={statistics}
       />
     </div>
   );
