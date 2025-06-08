@@ -13,10 +13,18 @@
 # testing
 /coverage
 
-# next.js - Modified to allow export-detail.json
-/.next/*
-!/.next/export-detail.json
+# next.js - SAFE VERSION - specific excludes instead of blanket ignore
+/.next/cache/
+/.next/server/
+/.next/static/
+/.next/trace
+/.next/build-manifest.json
+/.next/export-marker.json
+/.next/prerender-manifest.json
+/.next/routes-manifest.json
 /out/
+
+# Keep export-detail.json accessible by NOT ignoring .next/ completely
 
 # production
 /build
