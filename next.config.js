@@ -1,10 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Webpack Konfiguration für Web3 Kompatibilität
+  // Nur essentielles für Web3
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
-        ...config.resolve.fallback,
         fs: false,
         net: false,
         tls: false,
@@ -14,37 +13,22 @@ const nextConfig = {
     return config;
   },
 
-  // Images Konfiguration
+  // Images unoptimized für Vercel-Kompatibilität
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-      },
-      {
-        protocol: 'https',
-        hostname: '*.ipfs.w3s.link',
-      }
-    ],
+    unoptimized: true,
   },
 
-  // React Strict Mode
-  reactStrictMode: true,
-
-  // ESLint während Build ignorieren
+  // Errors ignorieren für Deployment
   eslint: {
     ignoreDuringBuilds: true,
   },
-
-  // TypeScript Errors während Build ignorieren  
+  
   typescript: {
     ignoreBuildErrors: true,
   },
 
-  // Turbopack deaktivieren für Kompatibilität
-  experimental: {
-    turbo: false,
-  },
+  // React Strict Mode
+  reactStrictMode: true,
 };
 
 module.exports = nextConfig;
