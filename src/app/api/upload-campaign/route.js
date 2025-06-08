@@ -3,6 +3,8 @@ import { create } from '@web3-storage/w3up-client';
 // ✅ Node.js Runtime erzwingen für Edge-Kompatibilität
 export const runtime = 'nodejs';
 
+export const dynamic = 'force-dynamic';
+
 let storachaClient = null;
 let isClientReady = false;
 
