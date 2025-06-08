@@ -18,6 +18,14 @@ export async function POST(request) {
     
     console.log('📋 Campaign:', campaignData.title);
 
+    // ✅ Check Pinata JWT
+    const pinataJWT = process.env.PINATA_JWT;
+    if (!pinataJWT) {
+      throw new Error('PINATA_JWT environment variable is required');
+    }
+    
+    console.log('🔑 Pinata JWT found:', pinataJWT.substring(0, 20) + '...');
+
     // Create metadata
     const metadata = {
       title: campaignData.title,
@@ -56,14 +64,27 @@ export async function POST(request) {
     const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.PINATA_JWT}`,
+        'Authorization': `Bearer ${pinataJWT}`,
       },
       body: formData
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Pinata upload failed: ${errorData.error || response.statusText}`);
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { error: errorText };
+      }
+      
+      console.error('❌ Pinata API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData
+      });
+      
+      throw new Error(`Pinata upload failed (${response.status}): ${errorData.error || errorData.message || errorText}`);
     }
 
     const result = await response.json();
