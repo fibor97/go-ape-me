@@ -1,7 +1,18 @@
-import { Heart, Clock, Users, Trash2, ExternalLink, Copy } from 'lucide-react';
+// Updated CampaignCard Component
+
+import { Heart, Clock, Users, Trash2, ExternalLink, Copy, Wallet } from 'lucide-react';
 import { useState } from 'react';
 
-const CampaignCard = ({ campaign, onDonate, onDelete, currentUserAddress, showDeleteButton = true }) => {
+const CampaignCard = ({ 
+  campaign, 
+  onDonate, 
+  onDelete, 
+  currentUserAddress, 
+  showDeleteButton = true,
+  isConnected = false,
+  isCorrectNetwork = false,
+  onConnectWallet
+}) => {
   const [showActions, setShowActions] = useState(false);
   const [copied, setCopied] = useState(false);
   
@@ -26,6 +37,25 @@ const CampaignCard = ({ campaign, onDonate, onDelete, currentUserAddress, showDe
     if (campaign.ipfsUrl) {
       window.open(campaign.ipfsUrl, '_blank');
     }
+  };
+
+  // Handle Support Button Click
+  const handleSupportClick = () => {
+    if (!isConnected) {
+      // Show connection prompt instead of opening modal
+      if (confirm('You need to connect your wallet to make real donations. Connect now?')) {
+        onConnectWallet();
+      }
+      return;
+    }
+
+    if (!isCorrectNetwork) {
+      alert('Please switch to ApeChain to donate');
+      return;
+    }
+
+    // Open donation modal
+    onDonate(campaign);
   };
 
   // Formatiere Creator Address
@@ -60,6 +90,17 @@ const CampaignCard = ({ campaign, onDonate, onDelete, currentUserAddress, showDe
         <div className="absolute top-4 left-4">
           <span className="bg-purple-500 text-white px-3 py-1 rounded-full text-sm font-medium">
             {campaign.category}
+          </span>
+        </div>
+
+        {/* Campaign Type Indicator */}
+        <div className="absolute top-4 left-4 mt-10">
+          <span className={`text-xs px-2 py-1 rounded-full ${
+            campaign.isFromBlockchain 
+              ? 'bg-blue-500 text-white' 
+              : 'bg-gray-500 text-white'
+          }`}>
+            {campaign.isFromBlockchain ? '⛓️ Blockchain' : '📱 Local'}
           </span>
         </div>
 
@@ -181,13 +222,40 @@ const CampaignCard = ({ campaign, onDonate, onDelete, currentUserAddress, showDe
           </div>
         </div>
         
+        {/* Support Button with Wallet Check */}
         <button 
-          onClick={() => onDonate(campaign)}
-          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center justify-center gap-2"
+          onClick={handleSupportClick}
+          className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+            isConnected && isCorrectNetwork
+              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
+              : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600'
+          }`}
         >
-          <Heart className="w-5 h-5" />
-          Support
+          {isConnected && isCorrectNetwork ? (
+            <>
+              <Heart className="w-5 h-5" />
+              Support with APE
+            </>
+          ) : (
+            <>
+              <Wallet className="w-5 h-5" />
+              Connect Wallet to Support
+            </>
+          )}
         </button>
+
+        {/* Wallet Status Hint */}
+        {!isConnected && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+            Connect wallet for real APE donations
+          </p>
+        )}
+        
+        {isConnected && !isCorrectNetwork && (
+          <p className="text-xs text-red-500 dark:text-red-400 text-center mt-2">
+            Switch to ApeChain to donate
+          </p>
+        )}
       </div>
     </div>
   );

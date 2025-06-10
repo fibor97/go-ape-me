@@ -16,13 +16,38 @@ const useDarkMode = () => {
   return { isDark: true };
 };
 
-const DonateModal = ({ isOpen, campaign, onClose, onDonate }) => {
+// Updated DonateModal in page.js
+
+const DonateModal = ({ isOpen, campaign, onClose, onDonate, isConnected, isCorrectNetwork, chainName }) => {
   const [amount, setAmount] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
   
-  const handleDonate = () => {
-    if (amount && parseFloat(amount) > 0) {
-      onDonate(campaign.id, parseFloat(amount));
+  const handleDonate = async () => {
+    if (!amount || parseFloat(amount) <= 0) {
+      alert('Please enter a valid donation amount');
+      return;
+    }
+
+    if (!isConnected) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    if (!isCorrectNetwork) {
+      alert(`Please switch to ApeChain. Currently on: ${chainName}`);
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      await onDonate(campaign.id, parseFloat(amount));
       setAmount('');
+      alert(`Successfully donated ${amount} APE! 🎉`);
+    } catch (error) {
+      console.error('Donation failed:', error);
+      alert(`Donation failed: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
     }
   };
   
@@ -48,34 +73,86 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate }) => {
               <span className="text-gray-800 dark:text-gray-200">Goal:</span>
               <span className="font-semibold text-gray-900 dark:text-gray-100">{campaign.target} APE</span>
             </div>
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-gray-800 dark:text-gray-200">Campaign Type:</span>
+              <span className="text-sm px-2 py-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                {campaign.isFromBlockchain ? '⛓️ Blockchain' : '📱 Local'}
+              </span>
+            </div>
           </div>
         </div>
+
+        {/* Wallet Status */}
+        {!isConnected && (
+          <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              ⚠️ Please connect your wallet to donate with real APE tokens
+            </p>
+          </div>
+        )}
+
+        {isConnected && !isCorrectNetwork && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p className="text-sm text-red-800 dark:text-red-200">
+              ❌ Please switch to ApeChain. Currently on: {chainName}
+            </p>
+          </div>
+        )}
+
+        {isConnected && isCorrectNetwork && (
+          <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <p className="text-sm text-green-800 dark:text-green-200">
+              ✅ Ready to donate with real APE tokens on ApeChain!
+            </p>
+          </div>
+        )}
         
         <div className="mb-6">
-          <label className="block text-sm font-medium mb-2 text-gray-800 dark:text-gray-200">Donation Amount (APE)</label>
+          <label className="block text-sm font-medium mb-2 text-gray-800 dark:text-gray-200">
+            Donation Amount (APE)
+          </label>
           <input
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.0"
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            step="0.01"
+            min="0"
+            disabled={isProcessing}
+            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
           />
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {isConnected && isCorrectNetwork 
+              ? 'This will be a real blockchain transaction' 
+              : 'Connect your wallet for real donations'
+            }
+          </p>
         </div>
         
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+            disabled={isProcessing}
+            className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleDonate}
-            disabled={!amount || parseFloat(amount) <= 0}
+            disabled={!amount || parseFloat(amount) <= 0 || isProcessing}
             className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            <Heart className="w-5 h-5" />
-            Donate
+            {isProcessing ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                Processing...
+              </>
+            ) : (
+              <>
+                <Heart className="w-5 h-5" />
+                {isConnected && isCorrectNetwork ? 'Donate APE' : 'Simulate Donation'}
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -310,16 +387,20 @@ export default function GoApeMe() {
     }
   };
   
-  const handleDonate = (campaignId, amount) => {
-    try {
-      addDonation(campaignId, amount);
-      setIsDonateModalOpen(false);
-      setSelectedCampaign(null);
-    } catch (error) {
-      console.error('Failed to process donation:', error);
-      alert('Failed to process donation: ' + error.message);
-    }
-  };
+  const handleDonate = async (campaignId, amount) => {
+  try {
+    setIsDonateModalOpen(false);
+    setSelectedCampaign(null);
+    
+    // This will now trigger real smart contract donation
+    await addDonation(campaignId, amount);
+    
+    console.log('✅ Donation completed successfully');
+  } catch (error) {
+    console.error('❌ Failed to process donation:', error);
+    alert('Failed to process donation: ' + error.message);
+  }
+};
 
   const handleDeleteCampaign = (campaignId) => {
     try {
@@ -510,14 +591,17 @@ export default function GoApeMe() {
           {!isLoading && filteredCampaigns.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredCampaigns.map(campaign => (
-                <CampaignCard 
-                  key={campaign.id} 
-                  campaign={campaign} 
-                  onDonate={openDonateModal}
-                  onDelete={handleDeleteCampaign}
-                  currentUserAddress={address}
-                />
-              ))}
+  <CampaignCard 
+    key={campaign.id} 
+    campaign={campaign} 
+    onDonate={openDonateModal}
+    onDelete={handleDeleteCampaign}
+    currentUserAddress={address}
+    isConnected={isConnected}
+    isCorrectNetwork={isCorrectNetwork}
+    onConnectWallet={connect}
+  />
+))}
             </div>
           )}
 
@@ -558,14 +642,17 @@ export default function GoApeMe() {
       />
       
       <DonateModal
-        isOpen={isDonateModalOpen}
-        campaign={selectedCampaign}
-        onClose={() => {
-          setIsDonateModalOpen(false);
-          setSelectedCampaign(null);
-        }}
-        onDonate={handleDonate}
-      />
+  isOpen={isDonateModalOpen}
+  campaign={selectedCampaign}
+  onClose={() => {
+    setIsDonateModalOpen(false);
+    setSelectedCampaign(null);
+  }}
+  onDonate={handleDonate}
+  isConnected={isConnected}
+  isCorrectNetwork={isCorrectNetwork}
+  chainName={chainName}
+/>
 
       {/* Wallet Modal */}
       <WalletModal
