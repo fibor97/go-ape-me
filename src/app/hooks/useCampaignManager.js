@@ -107,10 +107,18 @@ export const useCampaignManager = () => {
       let ipfsResult = null;
       try {
         console.log('📤 Uploading metadata to IPFS...');
-        ipfsResult = await uploadCampaignData({
-          ...campaignData,
-          creator: creatorAddress
-        });
+
+// Debug: Log what we're uploading
+const metadataToUpload = {
+  ...campaignData,
+  creator: creatorAddress
+};
+console.log('🔍 Metadata being uploaded:', metadataToUpload);
+console.log('🖼️ Has custom image?', campaignData.hasCustomImage);
+console.log('🖼️ Image data length:', campaignData.image?.length || 0);
+console.log('🖼️ Image starts with:', campaignData.image?.substring(0, 50) || 'No image');
+
+ipfsResult = await uploadCampaignData(metadataToUpload);
         console.log('✅ IPFS Upload successful:', ipfsResult.cid);
       } catch (ipfsError) {
         console.warn('⚠️ IPFS upload failed, continuing without metadata:', ipfsError.message);

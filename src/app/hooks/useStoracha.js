@@ -13,6 +13,9 @@ export const useStoracha = () => {
     
     try {
       console.log('📤 Starting upload process...');
+console.log('🔍 Campaign data received:', campaignData);
+console.log('🖼️ Has image?', !!campaignData.image);
+console.log('🖼️ Has custom image?', campaignData.hasCustomImage);
       
       // Validierung
       if (!campaignData.title || !campaignData.description || !campaignData.target) {
