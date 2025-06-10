@@ -1,40 +1,67 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useStoracha } from './useStoracha';
-import { useSmartContract } from './useSmartContract'; // ← Das muss da sein!
-import { useIPFSRegistry } from './useIPFSRegistry';
+import { useSmartContract } from './useSmartContract';
 
 const CAMPAIGNS_STORAGE_KEY = 'go-ape-me-campaigns';
 
 export const useCampaignManager = () => {
   const [campaigns, setCampaigns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { uploadCampaignData, getCampaignData } = useStoracha();
-  const { loadAllCampaigns, addCampaignToRegistry } = useIPFSRegistry();
+  const { uploadCampaignData } = useStoracha();
+  const { 
+    createCampaignOnChain, 
+    donateToChain, 
+    loadCampaignsFromChain,
+    getContractStats,
+    isConnected,
+    isCorrectNetwork,
+    isClient
+  } = useSmartContract();
 
-  // Lade Kampagnen beim Start: Kombiniere lokale + Registry
+  // Load campaigns on startup: Blockchain first, then local backup
   useEffect(() => {
     const loadCampaigns = async () => {
       try {
-        console.log('🚀 Loading campaigns: Local + IPFS Registry...');
+        console.log('🚀 Loading campaigns...');
+        setIsLoading(true);
         
-        // 1. Lade lokale Kampagnen
-        const localCampaigns = await loadLocalCampaigns();
-        console.log(`📱 Loaded ${localCampaigns.length} local campaigns`);
+        let allCampaigns = [];
         
-        // 2. Lade Registry-Kampagnen
-        const registryCampaigns = await loadAllCampaigns();
-        console.log(`🌐 Loaded ${registryCampaigns.length} registry campaigns`);
+        // Try blockchain first (if available)
+        if (isClient) {
+          try {
+            const blockchainCampaigns = await loadCampaignsFromChain();
+            console.log(`⛓️ Loaded ${blockchainCampaigns.length} campaigns from blockchain`);
+            allCampaigns = [...blockchainCampaigns];
+          } catch (error) {
+            console.warn('⚠️ Could not load from blockchain:', error.message);
+          }
+        }
         
-        // 3. Kombiniere und dedupliziere
-        const allCampaigns = combineAndDeduplicateCampaigns(localCampaigns, registryCampaigns);
-        console.log(`✅ Total campaigns: ${allCampaigns.length}`);
+        // Add local campaigns as backup
+        const localCampaigns = loadLocalCampaigns();
+        console.log(`📱 Found ${localCampaigns.length} local campaigns`);
         
+        // Add local campaigns that aren't on blockchain
+        localCampaigns.forEach(localCampaign => {
+          const existsOnBlockchain = allCampaigns.some(
+            bc => bc.title === localCampaign.title && bc.creator === localCampaign.creator
+          );
+          if (!existsOnBlockchain) {
+            allCampaigns.push({
+              ...localCampaign,
+              isLocalOnly: true
+            });
+          }
+        });
+        
+        console.log(`✅ Total campaigns loaded: ${allCampaigns.length}`);
         setCampaigns(allCampaigns);
         
       } catch (error) {
         console.error('❌ Failed to load campaigns:', error);
-        // Fallback: Nur lokale Kampagnen
-        const localCampaigns = await loadLocalCampaigns();
+        // Fallback to local only
+        const localCampaigns = loadLocalCampaigns();
         setCampaigns(localCampaigns);
       } finally {
         setIsLoading(false);
@@ -42,35 +69,18 @@ export const useCampaignManager = () => {
     };
 
     loadCampaigns();
-  }, [loadAllCampaigns]);
+  }, [loadCampaignsFromChain, isClient]);
 
-  // Lade lokale Kampagnen aus localStorage
-  const loadLocalCampaigns = async () => {
+  // Load local campaigns from localStorage
+  const loadLocalCampaigns = () => {
     try {
       const storedCampaigns = localStorage.getItem(CAMPAIGNS_STORAGE_KEY);
       if (storedCampaigns) {
         const parsedCampaigns = JSON.parse(storedCampaigns);
-        
-        // Validiere IPFS-Daten für lokale Kampagnen
-        const validatedCampaigns = await Promise.allSettled(
-          parsedCampaigns.map(async (campaign) => {
-            if (campaign.ipfsCid) {
-              try {
-                const ipfsData = await getCampaignData(campaign.ipfsCid);
-                return { ...campaign, ipfsData, isValid: true, isLocal: true };
-              } catch (error) {
-                console.warn(`Failed to load IPFS data for local campaign ${campaign.id}:`, error);
-                return { ...campaign, isValid: false, isLocal: true };
-              }
-            }
-            return { ...campaign, isLocal: true };
-          })
-        );
-
-        return validatedCampaigns
-          .filter(result => result.status === 'fulfilled')
-          .map(result => result.value)
-          .filter(campaign => campaign.isValid !== false);
+        return parsedCampaigns.map(campaign => ({
+          ...campaign,
+          isLocal: true
+        }));
       }
       return [];
     } catch (error) {
@@ -79,34 +89,12 @@ export const useCampaignManager = () => {
     }
   };
 
-  // Kombiniere lokale und Registry-Kampagnen (ohne Duplikate)
-  const combineAndDeduplicateCampaigns = (localCampaigns, registryCampaigns) => {
-    const combined = [...localCampaigns];
-    
-    // Füge Registry-Kampagnen hinzu, die nicht bereits lokal vorhanden sind
-    registryCampaigns.forEach(registryCampaign => {
-      const existsLocally = localCampaigns.some(local => 
-        local.ipfsCid === registryCampaign.ipfsCid ||
-        (local.title === registryCampaign.title && local.creator === registryCampaign.creator)
-      );
-      
-      if (!existsLocally) {
-        combined.push({
-          ...registryCampaign,
-          isFromRegistry: true
-        });
-      }
-    });
-    
-    // Sortiere nach Erstellungsdatum (neueste zuerst)
-    return combined.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  };
-
-  // Speichere Kampagnen in localStorage
+  // Save campaigns to localStorage (local campaigns only)
   const saveCampaigns = useCallback((campaignsToSave) => {
     try {
-      // Speichere nur lokale Kampagnen (nicht Registry-Kampagnen)
-      const localCampaigns = campaignsToSave.filter(campaign => !campaign.isFromRegistry);
+      const localCampaigns = campaignsToSave.filter(campaign => 
+        campaign.isLocal && !campaign.isFromBlockchain
+      );
       const dataToSave = JSON.stringify(localCampaigns);
       localStorage.setItem(CAMPAIGNS_STORAGE_KEY, dataToSave);
       console.log('💾 Local campaigns saved:', localCampaigns.length);
@@ -115,70 +103,216 @@ export const useCampaignManager = () => {
     }
   }, []);
 
-  // Erstelle neue Kampagne (mit Registry-Integration)
+  // Create campaign - Blockchain + IPFS integration
   const createCampaign = useCallback(async (campaignData, creatorAddress) => {
     try {
-      console.log('📝 Creating campaign with registry integration...');
+      console.log('📝 Creating campaign...');
       
-      // 1. Upload zu IPFS
-      const ipfsResult = await uploadCampaignData({
-        ...campaignData,
-        creator: creatorAddress
-      });
+      // Check if blockchain is available and user is connected
+      const useBlockchain = isClient && isConnected && isCorrectNetwork;
+      
+      if (useBlockchain) {
+        console.log('⛓️ Using blockchain for campaign creation');
+        
+        // 1. Upload metadata to IPFS first
+        let ipfsResult = null;
+        try {
+          console.log('📤 Uploading metadata to IPFS...');
+          ipfsResult = await uploadCampaignData({
+            ...campaignData,
+            creator: creatorAddress
+          });
+          console.log('✅ IPFS Upload successful:', ipfsResult.cid);
+        } catch (ipfsError) {
+          console.warn('⚠️ IPFS upload failed, continuing without metadata:', ipfsError.message);
+        }
 
-      console.log('✅ IPFS Upload successful:', ipfsResult);
+        // 2. Create campaign on blockchain
+        const blockchainResult = await createCampaignOnChain({
+          ...campaignData,
+          ipfsCid: ipfsResult?.cid || '',
+          durationInDays: campaignData.durationInDays || 30
+        });
 
-      // 2. Erstelle lokale Kampagne
-      const newCampaign = {
-        id: Date.now(),
-        title: campaignData.title,
-        description: campaignData.description,
-        category: campaignData.category,
-        target: parseFloat(campaignData.target),
-        creator: creatorAddress,
-        raised: 0,
-        backers: 0,
-        daysLeft: 30,
-        createdAt: new Date().toISOString(),
-        ipfsCid: ipfsResult.cid,
-        ipfsUrl: ipfsResult.url,
-        ipfsData: ipfsResult.metadata,
-        image: campaignData.hasCustomImage && campaignData.image ? campaignData.image : getRandomImage(),
-        hasCustomImage: campaignData.hasCustomImage && campaignData.image ? true : false,
-        isValid: true,
-        isLocal: true
-      };
+        console.log('✅ Blockchain campaign created:', blockchainResult);
 
-      // 3. Füge zur lokalen Liste hinzu
-      const updatedCampaigns = [newCampaign, ...campaigns];
-      setCampaigns(updatedCampaigns);
-      saveCampaigns(updatedCampaigns);
+        // 3. Create local representation for immediate UI update
+        const newCampaign = {
+          id: Date.now(),
+          blockchainId: blockchainResult.campaignId,
+          title: campaignData.title,
+          description: campaignData.description,
+          category: campaignData.category,
+          target: parseFloat(campaignData.target),
+          creator: creatorAddress,
+          raised: 0,
+          backers: 0,
+          daysLeft: campaignData.durationInDays || 30,
+          createdAt: new Date().toISOString(),
+          ipfsCid: ipfsResult?.cid || '',
+          ipfsUrl: ipfsResult?.url || '',
+          ipfsData: ipfsResult?.metadata || null,
+          txHash: blockchainResult.txHash,
+          blockNumber: blockchainResult.blockNumber,
+          status: 'Active',
+          isFromBlockchain: true,
+          isValid: true,
+          image: campaignData.hasCustomImage && campaignData.image ? campaignData.image : getRandomImage(),
+          hasCustomImage: campaignData.hasCustomImage && campaignData.image ? true : false
+        };
 
-      // 4. Füge zur Registry hinzu (asynchron, Fehler nicht blockierend)
-      try {
-        console.log('📋 Adding to global registry...');
-        const registryResult = await addCampaignToRegistry(ipfsResult.cid);
-        console.log('✅ Campaign added to registry:', registryResult);
-      } catch (registryError) {
-        console.warn('⚠️ Failed to add to registry (not critical):', registryError.message);
-        // Nicht blockierend - Kampagne ist trotzdem erstellt
+        // 4. Update UI immediately
+        const updatedCampaigns = [newCampaign, ...campaigns];
+        setCampaigns(updatedCampaigns);
+
+        // 5. Refresh from blockchain after delay
+        setTimeout(async () => {
+          try {
+            const refreshedCampaigns = await loadCampaignsFromChain();
+            setCampaigns(prevCampaigns => {
+              const localCampaigns = prevCampaigns.filter(c => c.isLocal && !c.isFromBlockchain);
+              return [...refreshedCampaigns, ...localCampaigns];
+            });
+          } catch (error) {
+            console.warn('Could not refresh from blockchain:', error);
+          }
+        }, 3000);
+
+        return { 
+          success: true, 
+          campaign: newCampaign, 
+          ipfsResult, 
+          blockchainResult 
+        };
+        
+      } else {
+        console.log('📱 Using local storage for campaign creation');
+        
+        // Fallback: Local campaign creation (old system)
+        let ipfsResult = null;
+        try {
+          ipfsResult = await uploadCampaignData({
+            ...campaignData,
+            creator: creatorAddress
+          });
+        } catch (ipfsError) {
+          console.warn('IPFS upload failed:', ipfsError.message);
+        }
+
+        const newCampaign = {
+          id: Date.now(),
+          title: campaignData.title,
+          description: campaignData.description,
+          category: campaignData.category,
+          target: parseFloat(campaignData.target),
+          creator: creatorAddress,
+          raised: 0,
+          backers: 0,
+          daysLeft: 30,
+          createdAt: new Date().toISOString(),
+          ipfsCid: ipfsResult?.cid || '',
+          ipfsUrl: ipfsResult?.url || '',
+          ipfsData: ipfsResult?.metadata || null,
+          image: campaignData.hasCustomImage && campaignData.image ? campaignData.image : getRandomImage(),
+          hasCustomImage: campaignData.hasCustomImage && campaignData.image ? true : false,
+          isValid: true,
+          isLocal: true
+        };
+
+        const updatedCampaigns = [newCampaign, ...campaigns];
+        setCampaigns(updatedCampaigns);
+        saveCampaigns(updatedCampaigns);
+
+        return { success: true, campaign: newCampaign, ipfsResult };
       }
-
-      console.log('✅ Campaign created successfully!');
       
-      return { success: true, campaign: newCampaign, ipfsResult };
     } catch (error) {
       console.error('❌ Failed to create campaign:', error);
       throw error;
     }
-  }, [campaigns, uploadCampaignData, saveCampaigns, addCampaignToRegistry]);
+  }, [campaigns, uploadCampaignData, createCampaignOnChain, loadCampaignsFromChain, isConnected, isCorrectNetwork, isClient, saveCampaigns]);
 
-  // Lösche Kampagne (nur lokale)
+  // Donate to campaign
+  const addDonation = useCallback(async (campaignId, amount) => {
+    try {
+      const campaign = campaigns.find(c => c.id === campaignId || c.blockchainId === campaignId);
+      if (!campaign) {
+        throw new Error('Campaign not found');
+      }
+
+      // If blockchain campaign and user is connected, use blockchain
+      if (campaign.isFromBlockchain && isConnected && isCorrectNetwork && isClient) {
+        const blockchainId = campaign.blockchainId || campaign.id;
+        console.log('💰 Donating to blockchain campaign:', blockchainId, amount, 'APE');
+
+        const result = await donateToChain(blockchainId, amount);
+        console.log('✅ Donation successful:', result);
+
+        // Update local state immediately
+        const updatedCampaigns = campaigns.map(c => 
+          (c.id === campaignId || c.blockchainId === campaignId) 
+            ? { 
+                ...c, 
+                raised: c.raised + amount, 
+                backers: c.backers + 1,
+                lastDonation: {
+                  amount,
+                  timestamp: new Date().toISOString(),
+                  txHash: result.txHash
+                }
+              }
+            : c
+        );
+        setCampaigns(updatedCampaigns);
+
+        // Refresh from blockchain after delay
+        setTimeout(async () => {
+          try {
+            const refreshedCampaigns = await loadCampaignsFromChain();
+            setCampaigns(prevCampaigns => {
+              const localCampaigns = prevCampaigns.filter(c => c.isLocal && !c.isFromBlockchain);
+              return [...refreshedCampaigns, ...localCampaigns];
+            });
+          } catch (error) {
+            console.warn('Could not refresh from blockchain:', error);
+          }
+        }, 3000);
+
+        return { success: true, txHash: result.txHash };
+      } else {
+        // Local donation (simulation)
+        console.log('📱 Local donation simulation');
+        const updatedCampaigns = campaigns.map(c => 
+          c.id === campaignId 
+            ? { 
+                ...c, 
+                raised: c.raised + amount, 
+                backers: c.backers + 1,
+                lastDonation: {
+                  amount,
+                  timestamp: new Date().toISOString()
+                }
+              }
+            : c
+        );
+        setCampaigns(updatedCampaigns);
+        saveCampaigns(updatedCampaigns);
+
+        return { success: true };
+      }
+
+    } catch (error) {
+      console.error('❌ Failed to process donation:', error);
+      throw error;
+    }
+  }, [campaigns, donateToChain, loadCampaignsFromChain, isConnected, isCorrectNetwork, isClient, saveCampaigns]);
+
+  // Delete campaign (only local campaigns)
   const deleteCampaign = useCallback((campaignId) => {
     const campaignToDelete = campaigns.find(c => c.id === campaignId);
     
-    if (campaignToDelete && campaignToDelete.isFromRegistry) {
-      throw new Error('Cannot delete campaigns from registry. This campaign exists on IPFS.');
+    if (campaignToDelete && campaignToDelete.isFromBlockchain) {
+      throw new Error('Cannot delete blockchain campaigns. They exist permanently on ApeChain.');
     }
     
     const updatedCampaigns = campaigns.filter(campaign => campaign.id !== campaignId);
@@ -188,64 +322,29 @@ export const useCampaignManager = () => {
     return { success: true, deletedId: campaignId };
   }, [campaigns, saveCampaigns]);
 
-  // Update Kampagne (für Donations)
-  const updateCampaign = useCallback((campaignId, updates) => {
-    const updatedCampaigns = campaigns.map(campaign => 
-      campaign.id === campaignId 
-        ? { ...campaign, ...updates }
-        : campaign
-    );
-    setCampaigns(updatedCampaigns);
-    saveCampaigns(updatedCampaigns);
-    
-    return { success: true };
-  }, [campaigns, saveCampaigns]);
-
-  // Spende zu Kampagne hinzufügen
-  const addDonation = useCallback((campaignId, amount) => {
-    const campaign = campaigns.find(c => c.id === campaignId);
-    if (!campaign) {
-      throw new Error('Campaign not found');
-    }
-
-    const updates = {
-      raised: campaign.raised + amount,
-      backers: campaign.backers + 1,
-      lastDonation: {
-        amount,
-        timestamp: new Date().toISOString()
-      }
-    };
-
-    return updateCampaign(campaignId, updates);
-  }, [campaigns, updateCampaign]);
-
-  // Lade Kampagne von IPFS (für externe CIDs)
+  // Import campaign from IPFS CID
   const loadCampaignFromIPFS = useCallback(async (cid) => {
     try {
-      const ipfsData = await getCampaignData(cid);
-      
-      // Prüfe ob Kampagne bereits existiert
+      // This is mainly for the admin panel import function
+      // For now, just add it as local campaign
       const existingCampaign = campaigns.find(campaign => campaign.ipfsCid === cid);
       if (existingCampaign) {
         return { success: true, campaign: existingCampaign, alreadyExists: true };
       }
 
-      // Erstelle neue Kampagne aus IPFS-Daten
+      // Create placeholder campaign that will be populated from IPFS
       const importedCampaign = {
         id: Date.now(),
-        title: ipfsData.title,
-        description: ipfsData.description,
-        category: ipfsData.category || 'Technology',
-        target: ipfsData.target,
-        creator: ipfsData.creator,
+        title: `Imported Campaign ${cid.slice(0, 8)}`,
+        description: 'Loading from IPFS...',
+        category: 'Technology',
+        target: 100,
+        creator: 'Unknown',
         raised: 0,
         backers: 0,
         daysLeft: 30,
-        createdAt: ipfsData.createdAt || new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         ipfsCid: cid,
-        ipfsUrl: `https://tomato-petite-butterfly-553.mypinata.cloud/ipfs/${cid}`,
-        ipfsData: ipfsData,
         image: getRandomImage(),
         isValid: true,
         imported: true,
@@ -258,50 +357,104 @@ export const useCampaignManager = () => {
 
       return { success: true, campaign: importedCampaign };
     } catch (error) {
-      console.error('Failed to load campaign from IPFS:', error);
+      console.error('Failed to import campaign from IPFS:', error);
       throw error;
     }
-  }, [campaigns, getCampaignData, saveCampaigns]);
+  }, [campaigns, saveCampaigns]);
 
-  // Refresh Registry (manuell alle Registry-Kampagnen neu laden)
-  const refreshFromRegistry = useCallback(async () => {
+  // Refresh campaigns from blockchain
+  const refreshFromBlockchain = useCallback(async () => {
+    if (!isClient) {
+      throw new Error('Blockchain not available');
+    }
+
     try {
       setIsLoading(true);
-      console.log('🔄 Refreshing campaigns from registry...');
+      console.log('🔄 Refreshing campaigns from blockchain...');
       
-      const localCampaigns = await loadLocalCampaigns();
-      const registryCampaigns = await loadAllCampaigns();
-      const allCampaigns = combineAndDeduplicateCampaigns(localCampaigns, registryCampaigns);
+      const blockchainCampaigns = await loadCampaignsFromChain();
+      const localCampaigns = loadLocalCampaigns();
+      
+      // Combine blockchain + local (non-blockchain) campaigns
+      const allCampaigns = [...blockchainCampaigns];
+      localCampaigns.forEach(local => {
+        const existsOnBlockchain = blockchainCampaigns.some(
+          bc => bc.title === local.title && bc.creator === local.creator
+        );
+        if (!existsOnBlockchain) {
+          allCampaigns.push({
+            ...local,
+            isLocalOnly: true
+          });
+        }
+      });
       
       setCampaigns(allCampaigns);
       console.log(`✅ Refreshed: ${allCampaigns.length} total campaigns`);
       
       return { success: true, total: allCampaigns.length };
     } catch (error) {
-      console.error('❌ Failed to refresh from registry:', error);
+      console.error('❌ Failed to refresh from blockchain:', error);
       throw error;
     } finally {
       setIsLoading(false);
     }
-  }, [loadAllCampaigns]);
+  }, [loadCampaignsFromChain, isClient]);
 
-  // Clear alle LOKALEN Kampagnen (Registry bleibt)
+  // Clear local campaigns only
   const clearAllCampaigns = useCallback(() => {
-    const registryCampaigns = campaigns.filter(campaign => campaign.isFromRegistry);
-    setCampaigns(registryCampaigns);
+    const blockchainCampaigns = campaigns.filter(campaign => campaign.isFromBlockchain);
+    setCampaigns(blockchainCampaigns);
     localStorage.removeItem(CAMPAIGNS_STORAGE_KEY);
     return { success: true };
   }, [campaigns]);
 
-  // Statistiken
-  const statistics = {
-    totalCampaigns: campaigns.length,
-    localCampaigns: campaigns.filter(c => c.isLocal && !c.isFromRegistry).length,
-    registryCampaigns: campaigns.filter(c => c.isFromRegistry).length,
-    totalRaised: campaigns.reduce((sum, campaign) => sum + campaign.raised, 0),
-    totalBackers: campaigns.reduce((sum, campaign) => sum + campaign.backers, 0),
-    totalIPFSCampaigns: campaigns.filter(campaign => campaign.ipfsCid).length
-  };
+  // Enhanced statistics
+  const getStatistics = useCallback(async () => {
+    try {
+      // Get blockchain stats if available
+      let blockchainStats = null;
+      if (isClient && getContractStats) {
+        try {
+          blockchainStats = await getContractStats();
+        } catch (error) {
+          console.warn('Could not get blockchain stats:', error);
+        }
+      }
+      
+      // Calculate local stats
+      const localStats = {
+        totalCampaigns: campaigns.length,
+        blockchainCampaigns: campaigns.filter(c => c.isFromBlockchain).length,
+        localCampaigns: campaigns.filter(c => c.isLocal && !c.isFromBlockchain).length,
+        totalRaised: campaigns.reduce((sum, campaign) => sum + campaign.raised, 0),
+        totalBackers: campaigns.reduce((sum, campaign) => sum + campaign.backers, 0),
+        totalIPFSCampaigns: campaigns.filter(campaign => campaign.ipfsCid).length
+      };
+
+      return {
+        ...localStats,
+        blockchain: blockchainStats
+      };
+    } catch (error) {
+      console.error('Failed to get statistics:', error);
+      return {
+        totalCampaigns: campaigns.length,
+        blockchainCampaigns: campaigns.filter(c => c.isFromBlockchain).length,
+        localCampaigns: campaigns.filter(c => c.isLocal && !c.isFromBlockchain).length,
+        totalRaised: campaigns.reduce((sum, campaign) => sum + campaign.raised, 0),
+        totalBackers: campaigns.reduce((sum, campaign) => sum + campaign.backers, 0),
+        totalIPFSCampaigns: campaigns.filter(campaign => campaign.ipfsCid).length,
+        blockchain: null
+      };
+    }
+  }, [campaigns, getContractStats, isClient]);
+
+  // Get current statistics
+  const [statistics, setStatistics] = useState({});
+  useEffect(() => {
+    getStatistics().then(setStatistics);
+  }, [campaigns, getStatistics]);
 
   return {
     campaigns,
@@ -309,15 +462,19 @@ export const useCampaignManager = () => {
     statistics,
     createCampaign,
     deleteCampaign,
-    updateCampaign,
     addDonation,
-    loadCampaignFromIPFS,
+    loadCampaignFromIPFS, // For admin panel
     clearAllCampaigns,
-    refreshFromRegistry
+    refreshFromBlockchain, // Instead of refreshFromRegistry
+    
+    // Blockchain specific
+    isConnected,
+    isCorrectNetwork,
+    isClient
   };
 };
 
-// Helper: Zufällige Bilder für Kampagnen
+// Helper: Random images for campaigns
 const getRandomImage = () => {
   const images = [
     'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&h=300&fit=crop',
