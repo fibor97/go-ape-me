@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { Heart, Plus, Wallet, Clock, Users, AlertCircle, Trash2, Download, Upload } from 'lucide-react';
 import { useWalletConnection } from './hooks/useWalletConnection';
 import { useCampaignManager } from './hooks/useCampaignManager';
-import { useIPFSRegistry } from './hooks/useIPFSRegistry';
 import CreateCampaignModal from '../components/CreateCampaignModal';
 import CampaignCard from '../components/CampaignCard';
 import WalletModal from '../components/WalletModal';

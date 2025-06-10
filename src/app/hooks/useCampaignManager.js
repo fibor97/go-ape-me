@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useStoracha } from './useStoracha';
+import { useSmartContract } from './useSmartContract'; // ← Das muss da sein!
 import { useIPFSRegistry } from './useIPFSRegistry';
 
 const CAMPAIGNS_STORAGE_KEY = 'go-ape-me-campaigns';
