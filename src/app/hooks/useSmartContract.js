@@ -7,12 +7,15 @@ import { useState, useCallback, useEffect } from 'react';
 const CONTRACT_ADDRESS = '0x18f3b0210BE24c1b3bcFAEA5e113B30521033d6C';
 const APECHAIN_ID = 33139;
 
-// Contract ABI
+// Contract ABI (Application Binary Interface)
 const CONTRACT_ABI = [
   "function createCampaign(string title, string description, string category, string ipfsCid, uint256 goalInAPE, uint256 durationInDays) external returns (uint256)",
   "function donate(uint256 campaignId) external payable",
   "function getAllCampaigns() external view returns (tuple(uint256 id, address creator, string title, string description, string category, string ipfsCid, uint256 goal, uint256 raised, uint256 deadline, uint8 status, uint256 createdAt, uint256 donorCount)[])",
-  "function getContractStats() external view returns (uint256 totalCampaigns, uint256 activeCampaigns, uint256 successfulCampaigns, uint256 totalEscrowAmount, uint256 platformFeesAccumulated)"
+  "function getContractStats() external view returns (uint256 totalCampaigns, uint256 activeCampaigns, uint256 successfulCampaigns, uint256 totalEscrowAmount, uint256 platformFeesAccumulated)",
+  "function campaignCounter() external view returns (uint256)",
+  "event CampaignCreated(uint256 indexed campaignId, address indexed creator, string title, uint256 goal, uint256 deadline)",
+  "event DonationMade(uint256 indexed campaignId, address indexed donor, uint256 amount, uint256 newTotal)"
 ];
 
 // Campaign Status Enum
@@ -204,7 +207,24 @@ export const useSmartContract = () => {
 
     } catch (error) {
       console.error('❌ Donation failed:', error);
-      setError(error.message);
+      
+      // Enhanced error handling for user cancellation
+      let userMessage = error.message;
+      
+      if (error.code === 4001 || 
+          error.message?.includes('user rejected') ||
+          error.message?.includes('User denied') ||
+          error.message?.includes('cancelled') ||
+          error.message?.includes('rejected')) {
+        console.log('🚫 User cancelled transaction');
+        throw new Error('CANCELLED_BY_USER');
+      } else if (error.message?.includes('insufficient funds')) {
+        userMessage = 'Insufficient APE balance for this donation';
+      } else if (error.message?.includes('gas')) {
+        userMessage = 'Transaction failed due to gas issues. Please try again.';
+      }
+      
+      setError(userMessage);
       throw error;
     } finally {
       setIsLoading(false);
@@ -301,20 +321,34 @@ export const useSmartContract = () => {
               
               if (ipfsData) {
                 console.log(`✅ IPFS data loaded for: ${campaign.title}`);
-                console.log('🖼️ IPFS Data:', ipfsData); // Debug log
+                console.log('🖼️ IPFS Data Keys:', Object.keys(ipfsData));
+                console.log('🖼️ Full IPFS Data:', ipfsData);
                 
-                // Check all possible image fields
+                // Check all possible image fields with detailed logging
                 if (ipfsData.image) {
-                  console.log('✅ Found image:', ipfsData.image);
+                  console.log('✅ Found image field');
+                  console.log('📏 Image data length:', ipfsData.image.length);
+                  console.log('🔤 Image starts with:', ipfsData.image.substring(0, 50));
                   campaignImage = ipfsData.image;
                 } else if (ipfsData.campaignImage) {
-                  console.log('✅ Found campaignImage:', ipfsData.campaignImage);
+                  console.log('✅ Found campaignImage field');
                   campaignImage = ipfsData.campaignImage;
                 } else if (ipfsData.img) {
-                  console.log('✅ Found img:', ipfsData.img);
+                  console.log('✅ Found img field');
                   campaignImage = ipfsData.img;
                 } else {
-                  console.log('❌ No image found in IPFS data. Available fields:', Object.keys(ipfsData));
+                  console.log('❌ No image found in IPFS data');
+                  console.log('📋 Available fields:', Object.keys(ipfsData));
+                  console.log('🔍 Checking for base64 patterns...');
+                  
+                  // Check if any field contains base64 image data
+                  Object.keys(ipfsData).forEach(key => {
+                    const value = ipfsData[key];
+                    if (typeof value === 'string' && value.startsWith('data:image/')) {
+                      console.log(`🎯 Found base64 image in field: ${key}`);
+                      campaignImage = value;
+                    }
+                  });
                 }
                 
                 // Enhance blockchain data with IPFS data

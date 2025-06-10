@@ -80,7 +80,13 @@ const CampaignCard = ({
           src={campaign.image} 
           alt={campaign.title}
           className="w-full h-48 object-cover"
+          onLoad={() => {
+            console.log('✅ Image loaded successfully:', campaign.title);
+          }}
           onError={(e) => {
+            console.log('❌ Image failed to load for:', campaign.title);
+            console.log('🔗 Failed URL:', campaign.image);
+            console.log('🔗 Image starts with:', campaign.image?.substring(0, 50));
             // Fallback zu einem Standard-Bild bei Fehlern
             e.target.src = 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&h=300&fit=crop';
           }}
