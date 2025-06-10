@@ -28,65 +28,54 @@ export const useSmartContract = () => {
   const [error, setError] = useState(null);
   const [ethers, setEthers] = useState(null);
   const [isClient, setIsClient] = useState(false);
-  const [wagmiHooks, setWagmiHooks] = useState(null);
-  const [walletData, setWalletData] = useState({
-    address: undefined,
-    isConnected: false,
-    chain: undefined
-  });
 
-  // Load ethers and wagmi dynamically (client-side only)
+  // Safe Wagmi hooks - only call on client side
+  let account, publicClient, walletClient;
+  
+  if (typeof window !== 'undefined') {
+    try {
+      // Dynamic import of wagmi hooks
+      const { useAccount, usePublicClient, useWalletClient } = require('wagmi');
+      account = useAccount();
+      publicClient = usePublicClient();
+      const walletHook = useWalletClient();
+      walletClient = walletHook.data;
+    } catch (error) {
+      // Wagmi not available - use fallbacks
+      account = { address: undefined, isConnected: false, chain: undefined };
+      publicClient = null;
+      walletClient = null;
+    }
+  } else {
+    // Server side - use fallbacks
+    account = { address: undefined, isConnected: false, chain: undefined };
+    publicClient = null;
+    walletClient = null;
+  }
+
+  const { address, isConnected, chain } = account;
+
+  // Check if on correct network
+  const isCorrectNetwork = chain?.id === APECHAIN_ID;
+
+  // Load ethers dynamically (client-side only)
   useEffect(() => {
-    const loadDependencies = async () => {
+    const loadEthers = async () => {
       if (typeof window !== 'undefined') {
         try {
-          // Load ethers
           const ethersModule = await import('ethers');
           setEthers(ethersModule);
-          
-          // Load wagmi hooks
-          const wagmiModule = await import('wagmi');
-          setWagmiHooks(wagmiModule);
-          
           setIsClient(true);
-          console.log('✅ Blockchain dependencies loaded');
+          console.log('✅ Ethers loaded successfully');
         } catch (error) {
-          console.error('❌ Failed to load blockchain dependencies:', error);
+          console.error('❌ Failed to load ethers:', error);
           setError('Failed to load blockchain dependencies');
         }
       }
     };
 
-    loadDependencies();
+    loadEthers();
   }, []);
-
-  // Update wallet data when wagmi is available
-  useEffect(() => {
-    if (!wagmiHooks || !isClient) return;
-
-    const updateWalletData = () => {
-      try {
-        // Get wallet data using wagmi hooks
-        const account = wagmiHooks.useAccount();
-        setWalletData({
-          address: account.address,
-          isConnected: account.isConnected,
-          chain: account.chain
-        });
-      } catch (error) {
-        console.warn('Could not get wallet data:', error.message);
-      }
-    };
-
-    // Set up interval to check wallet data
-    const interval = setInterval(updateWalletData, 1000);
-    updateWalletData(); // Initial call
-
-    return () => clearInterval(interval);
-  }, [wagmiHooks, isClient]);
-
-  // Check if on correct network
-  const isCorrectNetwork = walletData.chain?.id === APECHAIN_ID;
 
   // Get read-only contract instance
   const getReadContract = useCallback(() => {
@@ -106,20 +95,17 @@ export const useSmartContract = () => {
 
   // Get write contract instance
   const getWriteContract = useCallback(async () => {
-    if (!ethers || !walletData.isConnected || !isCorrectNetwork || !isClient || !wagmiHooks) return null;
+    if (!ethers || !walletClient || !isConnected || !isCorrectNetwork || !isClient) return null;
 
     try {
-      const walletClient = wagmiHooks.useWalletClient();
-      if (!walletClient.data) return null;
-
-      const provider = new ethers.BrowserProvider(walletClient.data);
+      const provider = new ethers.BrowserProvider(walletClient);
       const signer = await provider.getSigner();
       return new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
     } catch (error) {
       console.error('Failed to get write contract:', error);
       return null;
     }
-  }, [ethers, walletData.isConnected, isCorrectNetwork, isClient, wagmiHooks]);
+  }, [ethers, walletClient, isConnected, isCorrectNetwork, isClient]);
 
   // Create campaign on blockchain
   const createCampaignOnChain = useCallback(async (campaignData) => {
@@ -131,7 +117,7 @@ export const useSmartContract = () => {
     setError(null);
 
     try {
-      if (!walletData.isConnected) throw new Error('Wallet not connected');
+      if (!isConnected) throw new Error('Wallet not connected');
       if (!isCorrectNetwork) throw new Error('Please switch to ApeChain');
 
       const contract = await getWriteContract();
@@ -181,7 +167,7 @@ export const useSmartContract = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [ethers, isClient, walletData.isConnected, isCorrectNetwork, getWriteContract]);
+  }, [ethers, isClient, isConnected, isCorrectNetwork, getWriteContract]);
 
   // Donate to campaign
   const donateToChain = useCallback(async (campaignId, amountInAPE) => {
@@ -193,7 +179,7 @@ export const useSmartContract = () => {
     setError(null);
 
     try {
-      if (!walletData.isConnected) throw new Error('Wallet not connected');
+      if (!isConnected) throw new Error('Wallet not connected');
       if (!isCorrectNetwork) throw new Error('Please switch to ApeChain');
 
       const contract = await getWriteContract();
@@ -201,8 +187,13 @@ export const useSmartContract = () => {
 
       const amountInWei = ethers.parseEther(amountInAPE.toString());
 
+      console.log('💰 Donating to campaign:', campaignId, 'Amount:', amountInAPE, 'APE');
+
       const tx = await contract.donate(campaignId, { value: amountInWei });
+      console.log('⏳ Donation transaction sent:', tx.hash);
+
       const receipt = await tx.wait();
+      console.log('✅ Donation confirmed:', receipt);
 
       return {
         success: true,
@@ -218,7 +209,7 @@ export const useSmartContract = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [ethers, isClient, walletData.isConnected, isCorrectNetwork, getWriteContract]);
+  }, [ethers, isClient, isConnected, isCorrectNetwork, getWriteContract]);
 
   // Load all campaigns from blockchain with IPFS data
   const loadCampaignsFromChain = useCallback(async () => {
@@ -396,14 +387,14 @@ export const useSmartContract = () => {
     // State
     isLoading,
     error,
-    isConnected: walletData.isConnected,
+    isConnected,
     isCorrectNetwork,
     contractAddress: CONTRACT_ADDRESS,
     isClient,
     
     // Wallet data
-    address: walletData.address,
-    chain: walletData.chain,
+    address,
+    chain,
     
     // Functions
     createCampaignOnChain: isClient ? createCampaignOnChain : async () => { throw new Error('Blockchain not available server-side'); },

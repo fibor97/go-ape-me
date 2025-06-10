@@ -18,51 +18,31 @@ export const useCampaignManager = () => {
     isClient
   } = useSmartContract();
 
-  // Load campaigns on startup: Blockchain first, then local backup
+  // Load campaigns on startup: ONLY Blockchain campaigns
   useEffect(() => {
     const loadCampaigns = async () => {
       try {
-        console.log('🚀 Loading campaigns...');
+        console.log('🚀 Loading campaigns from ApeChain...');
         setIsLoading(true);
         
-        let allCampaigns = [];
-        
-        // Try blockchain first (if available)
+        // ONLY load from blockchain - no local fallback
         if (isClient) {
           try {
             const blockchainCampaigns = await loadCampaignsFromChain();
-            console.log(`⛓️ Loaded ${blockchainCampaigns.length} campaigns from blockchain`);
-            allCampaigns = [...blockchainCampaigns];
+            console.log(`⛓️ Loaded ${blockchainCampaigns.length} campaigns from ApeChain`);
+            setCampaigns(blockchainCampaigns);
           } catch (error) {
-            console.warn('⚠️ Could not load from blockchain:', error.message);
+            console.error('❌ Could not load from blockchain:', error);
+            setCampaigns([]); // Empty if blockchain fails
           }
+        } else {
+          console.log('⏳ Waiting for blockchain dependencies...');
+          setCampaigns([]);
         }
-        
-        // Add local campaigns as backup
-        const localCampaigns = loadLocalCampaigns();
-        console.log(`📱 Found ${localCampaigns.length} local campaigns`);
-        
-        // Add local campaigns that aren't on blockchain
-        localCampaigns.forEach(localCampaign => {
-          const existsOnBlockchain = allCampaigns.some(
-            bc => bc.title === localCampaign.title && bc.creator === localCampaign.creator
-          );
-          if (!existsOnBlockchain) {
-            allCampaigns.push({
-              ...localCampaign,
-              isLocalOnly: true
-            });
-          }
-        });
-        
-        console.log(`✅ Total campaigns loaded: ${allCampaigns.length}`);
-        setCampaigns(allCampaigns);
         
       } catch (error) {
         console.error('❌ Failed to load campaigns:', error);
-        // Fallback to local only
-        const localCampaigns = loadLocalCampaigns();
-        setCampaigns(localCampaigns);
+        setCampaigns([]);
       } finally {
         setIsLoading(false);
       }
@@ -103,128 +83,93 @@ export const useCampaignManager = () => {
     }
   }, []);
 
-  // Create campaign - Blockchain + IPFS integration
+  // Create campaign - ALWAYS on Blockchain
   const createCampaign = useCallback(async (campaignData, creatorAddress) => {
     try {
-      console.log('📝 Creating campaign...');
+      console.log('📝 Creating campaign on ApeChain...');
       
-      // Check if blockchain is available and user is connected
-      const useBlockchain = isClient && isConnected && isCorrectNetwork;
-      
-      if (useBlockchain) {
-        console.log('⛓️ Using blockchain for campaign creation');
-        
-        // 1. Upload metadata to IPFS first
-        let ipfsResult = null;
-        try {
-          console.log('📤 Uploading metadata to IPFS...');
-          ipfsResult = await uploadCampaignData({
-            ...campaignData,
-            creator: creatorAddress
-          });
-          console.log('✅ IPFS Upload successful:', ipfsResult.cid);
-        } catch (ipfsError) {
-          console.warn('⚠️ IPFS upload failed, continuing without metadata:', ipfsError.message);
-        }
-
-        // 2. Create campaign on blockchain
-        const blockchainResult = await createCampaignOnChain({
-          ...campaignData,
-          ipfsCid: ipfsResult?.cid || '',
-          durationInDays: campaignData.durationInDays || 30
-        });
-
-        console.log('✅ Blockchain campaign created:', blockchainResult);
-
-        // 3. Create local representation for immediate UI update
-        const newCampaign = {
-          id: Date.now(),
-          blockchainId: blockchainResult.campaignId,
-          title: campaignData.title,
-          description: campaignData.description,
-          category: campaignData.category,
-          target: parseFloat(campaignData.target),
-          creator: creatorAddress,
-          raised: 0,
-          backers: 0,
-          daysLeft: campaignData.durationInDays || 30,
-          createdAt: new Date().toISOString(),
-          ipfsCid: ipfsResult?.cid || '',
-          ipfsUrl: ipfsResult?.url || '',
-          ipfsData: ipfsResult?.metadata || null,
-          txHash: blockchainResult.txHash,
-          blockNumber: blockchainResult.blockNumber,
-          status: 'Active',
-          isFromBlockchain: true,
-          isValid: true,
-          image: campaignData.hasCustomImage && campaignData.image ? campaignData.image : getRandomImage(),
-          hasCustomImage: campaignData.hasCustomImage && campaignData.image ? true : false
-        };
-
-        // 4. Update UI immediately
-        const updatedCampaigns = [newCampaign, ...campaigns];
-        setCampaigns(updatedCampaigns);
-
-        // 5. Refresh from blockchain after delay
-        setTimeout(async () => {
-          try {
-            const refreshedCampaigns = await loadCampaignsFromChain();
-            setCampaigns(prevCampaigns => {
-              const localCampaigns = prevCampaigns.filter(c => c.isLocal && !c.isFromBlockchain);
-              return [...refreshedCampaigns, ...localCampaigns];
-            });
-          } catch (error) {
-            console.warn('Could not refresh from blockchain:', error);
-          }
-        }, 3000);
-
-        return { 
-          success: true, 
-          campaign: newCampaign, 
-          ipfsResult, 
-          blockchainResult 
-        };
-        
-      } else {
-        console.log('📱 Using local storage for campaign creation');
-        
-        // Fallback: Local campaign creation (old system)
-        let ipfsResult = null;
-        try {
-          ipfsResult = await uploadCampaignData({
-            ...campaignData,
-            creator: creatorAddress
-          });
-        } catch (ipfsError) {
-          console.warn('IPFS upload failed:', ipfsError.message);
-        }
-
-        const newCampaign = {
-          id: Date.now(),
-          title: campaignData.title,
-          description: campaignData.description,
-          category: campaignData.category,
-          target: parseFloat(campaignData.target),
-          creator: creatorAddress,
-          raised: 0,
-          backers: 0,
-          daysLeft: 30,
-          createdAt: new Date().toISOString(),
-          ipfsCid: ipfsResult?.cid || '',
-          ipfsUrl: ipfsResult?.url || '',
-          ipfsData: ipfsResult?.metadata || null,
-          image: campaignData.hasCustomImage && campaignData.image ? campaignData.image : getRandomImage(),
-          hasCustomImage: campaignData.hasCustomImage && campaignData.image ? true : false,
-          isValid: true,
-          isLocal: true
-        };
-
-        const updatedCampaigns = [newCampaign, ...campaigns];
-        setCampaigns(updatedCampaigns);
-        saveCampaigns(updatedCampaigns);
-
-        return { success: true, campaign: newCampaign, ipfsResult };
+      // ENFORCE: Campaigns MUST be on blockchain
+      if (!isClient) {
+        throw new Error('Blockchain dependencies not loaded. Please refresh the page.');
       }
+      
+      if (!isConnected) {
+        throw new Error('Please connect your wallet to create campaigns on ApeChain.');
+      }
+      
+      if (!isCorrectNetwork) {
+        throw new Error('Please switch to ApeChain to create campaigns.');
+      }
+
+      console.log('⛓️ Creating campaign on ApeChain blockchain...');
+      
+      // 1. Upload metadata to IPFS first
+      let ipfsResult = null;
+      try {
+        console.log('📤 Uploading metadata to IPFS...');
+        ipfsResult = await uploadCampaignData({
+          ...campaignData,
+          creator: creatorAddress
+        });
+        console.log('✅ IPFS Upload successful:', ipfsResult.cid);
+      } catch (ipfsError) {
+        console.warn('⚠️ IPFS upload failed, continuing without metadata:', ipfsError.message);
+      }
+
+      // 2. Create campaign on blockchain
+      const blockchainResult = await createCampaignOnChain({
+        ...campaignData,
+        ipfsCid: ipfsResult?.cid || '',
+        durationInDays: campaignData.durationInDays || 30
+      });
+
+      console.log('✅ Blockchain campaign created:', blockchainResult);
+
+      // 3. Create local representation for immediate UI update
+      const newCampaign = {
+        id: Date.now(),
+        blockchainId: blockchainResult.campaignId,
+        title: campaignData.title,
+        description: campaignData.description,
+        category: campaignData.category,
+        target: parseFloat(campaignData.target),
+        creator: creatorAddress,
+        raised: 0,
+        backers: 0,
+        daysLeft: campaignData.durationInDays || 30,
+        createdAt: new Date().toISOString(),
+        ipfsCid: ipfsResult?.cid || '',
+        ipfsUrl: ipfsResult?.url || '',
+        ipfsData: ipfsResult?.metadata || null,
+        txHash: blockchainResult.txHash,
+        blockNumber: blockchainResult.blockNumber,
+        status: 'Active',
+        isFromBlockchain: true,
+        isValid: true,
+        image: campaignData.hasCustomImage && campaignData.image ? campaignData.image : getRandomImage(),
+        hasCustomImage: campaignData.hasCustomImage && campaignData.image ? true : false
+      };
+
+      // 4. Update UI immediately
+      const updatedCampaigns = [newCampaign, ...campaigns];
+      setCampaigns(updatedCampaigns);
+
+      // 5. Refresh from blockchain after delay to get accurate data
+      setTimeout(async () => {
+        try {
+          const refreshedCampaigns = await loadCampaignsFromChain();
+          setCampaigns(refreshedCampaigns);
+        } catch (error) {
+          console.warn('Could not refresh from blockchain:', error);
+        }
+      }, 3000);
+
+      return { 
+        success: true, 
+        campaign: newCampaign, 
+        ipfsResult, 
+        blockchainResult 
+      };
       
     } catch (error) {
       console.error('❌ Failed to create campaign:', error);
@@ -232,7 +177,7 @@ export const useCampaignManager = () => {
     }
   }, [campaigns, uploadCampaignData, createCampaignOnChain, loadCampaignsFromChain, isConnected, isCorrectNetwork, isClient, saveCampaigns]);
 
-  // Donate to campaign
+  // Donate to campaign - ALWAYS on Blockchain
   const addDonation = useCallback(async (campaignId, amount) => {
     try {
       const campaign = campaigns.find(c => c.id === campaignId || c.blockchainId === campaignId);
@@ -240,66 +185,54 @@ export const useCampaignManager = () => {
         throw new Error('Campaign not found');
       }
 
-      // If blockchain campaign and user is connected, use blockchain
-      if (campaign.isFromBlockchain && isConnected && isCorrectNetwork && isClient) {
-        const blockchainId = campaign.blockchainId || campaign.id;
-        console.log('💰 Donating to blockchain campaign:', blockchainId, amount, 'APE');
-
-        const result = await donateToChain(blockchainId, amount);
-        console.log('✅ Donation successful:', result);
-
-        // Update local state immediately
-        const updatedCampaigns = campaigns.map(c => 
-          (c.id === campaignId || c.blockchainId === campaignId) 
-            ? { 
-                ...c, 
-                raised: c.raised + amount, 
-                backers: c.backers + 1,
-                lastDonation: {
-                  amount,
-                  timestamp: new Date().toISOString(),
-                  txHash: result.txHash
-                }
-              }
-            : c
-        );
-        setCampaigns(updatedCampaigns);
-
-        // Refresh from blockchain after delay
-        setTimeout(async () => {
-          try {
-            const refreshedCampaigns = await loadCampaignsFromChain();
-            setCampaigns(prevCampaigns => {
-              const localCampaigns = prevCampaigns.filter(c => c.isLocal && !c.isFromBlockchain);
-              return [...refreshedCampaigns, ...localCampaigns];
-            });
-          } catch (error) {
-            console.warn('Could not refresh from blockchain:', error);
-          }
-        }, 3000);
-
-        return { success: true, txHash: result.txHash };
-      } else {
-        // Local donation (simulation)
-        console.log('📱 Local donation simulation');
-        const updatedCampaigns = campaigns.map(c => 
-          c.id === campaignId 
-            ? { 
-                ...c, 
-                raised: c.raised + amount, 
-                backers: c.backers + 1,
-                lastDonation: {
-                  amount,
-                  timestamp: new Date().toISOString()
-                }
-              }
-            : c
-        );
-        setCampaigns(updatedCampaigns);
-        saveCampaigns(updatedCampaigns);
-
-        return { success: true };
+      // ENFORCE: Donations MUST be on blockchain
+      if (!isClient) {
+        throw new Error('Blockchain dependencies not loaded. Please refresh the page.');
       }
+      
+      if (!isConnected) {
+        throw new Error('Please connect your wallet to donate with real APE.');
+      }
+      
+      if (!isCorrectNetwork) {
+        throw new Error('Please switch to ApeChain to donate.');
+      }
+
+      // All donations go through blockchain
+      const blockchainId = campaign.blockchainId || campaign.id;
+      console.log('💰 Donating to blockchain campaign:', blockchainId, amount, 'APE');
+
+      const result = await donateToChain(blockchainId, amount);
+      console.log('✅ Donation successful:', result);
+
+      // Update local state immediately
+      const updatedCampaigns = campaigns.map(c => 
+        (c.id === campaignId || c.blockchainId === campaignId) 
+          ? { 
+              ...c, 
+              raised: c.raised + amount, 
+              backers: c.backers + 1,
+              lastDonation: {
+                amount,
+                timestamp: new Date().toISOString(),
+                txHash: result.txHash
+              }
+            }
+          : c
+      );
+      setCampaigns(updatedCampaigns);
+
+      // Refresh from blockchain after delay
+      setTimeout(async () => {
+        try {
+          const refreshedCampaigns = await loadCampaignsFromChain();
+          setCampaigns(refreshedCampaigns);
+        } catch (error) {
+          console.warn('Could not refresh from blockchain:', error);
+        }
+      }, 3000);
+
+      return { success: true, txHash: result.txHash };
 
     } catch (error) {
       console.error('❌ Failed to process donation:', error);
