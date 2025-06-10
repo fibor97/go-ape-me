@@ -1,373 +1,487 @@
+// src/app/hooks/useSmartContract.js
+'use client';
+
 import { useState, useCallback, useEffect } from 'react';
-import { useStoracha } from './useStoracha';
-import { useSmartContract } from './useSmartContract';
+import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 
-const CAMPAIGNS_STORAGE_KEY = 'go-ape-me-campaigns';
+// Contract Configuration
+const CONTRACT_ADDRESS = '0x18f3b0210BE24c1b3bcFAEA5e113B30521033d6C';
+const APECHAIN_ID = 33139;
 
-export const useCampaignManager = () => {
-  const [campaigns, setCampaigns] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { uploadCampaignData } = useStoracha();
-  const { 
-    createCampaignOnChain, 
-    donateToChain, 
-    loadCampaignsFromChain,
-    getContractStats: getBlockchainStats,
-    isConnected,
-    isCorrectNetwork 
-  } = useSmartContract();
+// Contract ABI (Application Binary Interface)
+const CONTRACT_ABI = [
+  "function createCampaign(string title, string description, string category, string ipfsCid, uint256 goalInAPE, uint256 durationInDays) external returns (uint256)",
+  "function donate(uint256 campaignId) external payable",
+  "function getAllCampaigns() external view returns (tuple(uint256 id, address creator, string title, string description, string category, string ipfsCid, uint256 goal, uint256 raised, uint256 deadline, uint8 status, uint256 createdAt, uint256 donorCount)[])",
+  "function getActiveCampaigns() external view returns (tuple(uint256 id, address creator, string title, string description, string category, string ipfsCid, uint256 goal, uint256 raised, uint256 deadline, uint8 status, uint256 createdAt, uint256 donorCount)[])",
+  "function withdrawFunds(uint256 campaignId) external",
+  "function markCampaignFailed(uint256 campaignId) external",
+  "function claimRefund(uint256 campaignId) external",
+  "function getContractStats() external view returns (uint256 totalCampaigns, uint256 activeCampaigns, uint256 successfulCampaigns, uint256 totalEscrowAmount, uint256 platformFeesAccumulated)",
+  "function getCampaignDonations(uint256 campaignId) external view returns (tuple(address donor, uint256 amount, uint256 timestamp, bool refunded)[])",
+  "function getRefundableAmount(uint256 campaignId, address donor) external view returns (uint256 refundAmount, uint256 platformFee)",
+  "function PLATFORM_ADDRESS() external view returns (address)",
+  "function PLATFORM_FEE() external view returns (uint256)",
+  "event CampaignCreated(uint256 indexed campaignId, address indexed creator, string title, uint256 goal, uint256 deadline)",
+  "event DonationMade(uint256 indexed campaignId, address indexed donor, uint256 amount, uint256 newTotal)",
+  "event CampaignSuccessful(uint256 indexed campaignId, uint256 creatorAmount, uint256 platformFee)",
+  "event CampaignFailed(uint256 indexed campaignId, uint256 totalRefundable)"
+];
 
-  // Load campaigns on startup: Blockchain + Local backup
+// Campaign Status Enum
+const CampaignStatus = {
+  0: 'Active',
+  1: 'Successful', 
+  2: 'Failed',
+  3: 'Withdrawn'
+};
+
+export const useSmartContract = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [ethers, setEthers] = useState(null);
+  const [isClient, setIsClient] = useState(false);
+  
+  const { address, isConnected, chain } = useAccount();
+  const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
+
+  // Check if on correct network
+  const isCorrectNetwork = chain?.id === APECHAIN_ID;
+
+  // Load ethers dynamically (client-side only)
   useEffect(() => {
-    const loadCampaigns = async () => {
-      try {
-        console.log('🚀 Loading campaigns: Blockchain + Local backup...');
-        
-        // 1. Try to load from blockchain first
-        let blockchainCampaigns = [];
+    const loadEthers = async () => {
+      if (typeof window !== 'undefined') {
         try {
-          blockchainCampaigns = await loadCampaignsFromChain();
-          console.log(`⛓️ Loaded ${blockchainCampaigns.length} campaigns from blockchain`);
+          const ethersModule = await import('ethers');
+          setEthers(ethersModule);
+          setIsClient(true);
+          console.log('✅ Ethers loaded successfully');
         } catch (error) {
-          console.warn('⚠️ Could not load from blockchain:', error.message);
+          console.error('❌ Failed to load ethers:', error);
+          setError('Failed to load blockchain dependencies');
         }
-        
-        // 2. Load local campaigns as backup
-        const localCampaigns = loadLocalCampaigns();
-        console.log(`📱 Loaded ${localCampaigns.length} local campaigns`);
-        
-        // 3. Prioritize blockchain campaigns, add local as backup
-        const allCampaigns = [...blockchainCampaigns];
-        
-        // Add local campaigns that aren't on blockchain yet
-        localCampaigns.forEach(localCampaign => {
-          const existsOnBlockchain = blockchainCampaigns.some(
-            bc => bc.title === localCampaign.title && bc.creator === localCampaign.creator
-          );
-          if (!existsOnBlockchain) {
-            allCampaigns.push({
-              ...localCampaign,
-              isLocalOnly: true
-            });
-          }
-        });
-        
-        console.log(`✅ Total campaigns loaded: ${allCampaigns.length}`);
-        setCampaigns(allCampaigns);
-        
-      } catch (error) {
-        console.error('❌ Failed to load campaigns:', error);
-        // Fallback to local only
-        const localCampaigns = loadLocalCampaigns();
-        setCampaigns(localCampaigns);
-      } finally {
-        setIsLoading(false);
       }
     };
 
-    loadCampaigns();
-  }, [loadCampaignsFromChain]);
-
-  // Load local campaigns from localStorage
-  const loadLocalCampaigns = () => {
-    try {
-      const storedCampaigns = localStorage.getItem(CAMPAIGNS_STORAGE_KEY);
-      if (storedCampaigns) {
-        const parsedCampaigns = JSON.parse(storedCampaigns);
-        return parsedCampaigns.map(campaign => ({
-          ...campaign,
-          isLocal: true
-        }));
-      }
-      return [];
-    } catch (error) {
-      console.error('Failed to load local campaigns:', error);
-      return [];
-    }
-  };
-
-  // Save campaigns to localStorage (local campaigns only)
-  const saveCampaigns = useCallback((campaignsToSave) => {
-    try {
-      const localCampaigns = campaignsToSave.filter(campaign => 
-        campaign.isLocal && !campaign.isFromBlockchain
-      );
-      const dataToSave = JSON.stringify(localCampaigns);
-      localStorage.setItem(CAMPAIGNS_STORAGE_KEY, dataToSave);
-      console.log('💾 Local campaigns saved:', localCampaigns.length);
-    } catch (error) {
-      console.error('❌ Failed to save campaigns:', error);
-    }
+    loadEthers();
   }, []);
 
-  // Create campaign (Blockchain + IPFS)
-  const createCampaign = useCallback(async (campaignData, creatorAddress) => {
+  // Get read-only contract instance
+  const getReadContract = useCallback(() => {
+    if (!ethers || !isClient) return null;
+    
     try {
-      console.log('📝 Creating campaign on blockchain...');
-      
-      if (!isConnected) {
-        throw new Error('Please connect your wallet first');
-      }
-      
-      if (!isCorrectNetwork) {
-        throw new Error('Please switch to ApeChain');
-      }
-
-      // 1. Upload metadata to IPFS first
-      let ipfsResult = null;
-      try {
-        console.log('📤 Uploading metadata to IPFS...');
-        ipfsResult = await uploadCampaignData({
-          ...campaignData,
-          creator: creatorAddress
-        });
-        console.log('✅ IPFS Upload successful:', ipfsResult.cid);
-      } catch (ipfsError) {
-        console.warn('⚠️ IPFS upload failed, continuing without metadata:', ipfsError.message);
-      }
-
-      // 2. Create campaign on blockchain
-      const blockchainResult = await createCampaignOnChain({
-        ...campaignData,
-        ipfsCid: ipfsResult?.cid || '',
-        durationInDays: campaignData.durationInDays || 30
-      });
-
-      console.log('✅ Blockchain campaign created:', blockchainResult);
-
-      // 3. Create local representation for immediate UI update
-      const newCampaign = {
-        id: Date.now(), // Temporary local ID
-        blockchainId: blockchainResult.campaignId,
-        title: campaignData.title,
-        description: campaignData.description,
-        category: campaignData.category,
-        target: parseFloat(campaignData.target),
-        creator: creatorAddress,
-        raised: 0,
-        backers: 0,
-        daysLeft: campaignData.durationInDays || 30,
-        createdAt: new Date().toISOString(),
-        // IPFS Integration
-        ipfsCid: ipfsResult?.cid || '',
-        ipfsUrl: ipfsResult?.url || '',
-        ipfsData: ipfsResult?.metadata || null,
-        // Blockchain Integration
-        txHash: blockchainResult.txHash,
-        blockNumber: blockchainResult.blockNumber,
-        status: 'Active',
-        isFromBlockchain: true,
-        isValid: true,
-        // UI
-        image: campaignData.hasCustomImage && campaignData.image ? campaignData.image : getRandomImage(),
-        hasCustomImage: campaignData.hasCustomImage && campaignData.image ? true : false
-      };
-
-      // 4. Update UI immediately
-      const updatedCampaigns = [newCampaign, ...campaigns];
-      setCampaigns(updatedCampaigns);
-
-      // 5. Refresh from blockchain after a short delay to get accurate data
-      setTimeout(async () => {
-        try {
-          const refreshedCampaigns = await loadCampaignsFromChain();
-          setCampaigns(refreshedCampaigns);
-        } catch (error) {
-          console.warn('Could not refresh from blockchain:', error);
-        }
-      }, 3000);
-
-      console.log('✅ Campaign created successfully!');
-      
-      return { 
-        success: true, 
-        campaign: newCampaign, 
-        ipfsResult, 
-        blockchainResult 
-      };
-      
-    } catch (error) {
-      console.error('❌ Failed to create campaign:', error);
-      throw error;
-    }
-  }, [campaigns, uploadCampaignData, createCampaignOnChain, loadCampaignsFromChain, isConnected, isCorrectNetwork]);
-
-  // Donate to campaign (Blockchain)
-  const addDonation = useCallback(async (campaignId, amount) => {
-    try {
-      if (!isConnected) {
-        throw new Error('Please connect your wallet first');
-      }
-      
-      if (!isCorrectNetwork) {
-        throw new Error('Please switch to ApeChain');
-      }
-
-      const campaign = campaigns.find(c => c.id === campaignId || c.blockchainId === campaignId);
-      if (!campaign) {
-        throw new Error('Campaign not found');
-      }
-
-      // Use blockchain ID if available, otherwise use local ID
-      const blockchainId = campaign.blockchainId || campaign.id;
-
-      console.log('💰 Donating to blockchain campaign:', blockchainId, 'Amount:', amount, 'APE');
-
-      // Donate on blockchain
-      const result = await donateToChain(blockchainId, amount);
-      console.log('✅ Donation successful:', result);
-
-      // Update local state immediately for better UX
-      const updatedCampaigns = campaigns.map(c => 
-        (c.id === campaignId || c.blockchainId === campaignId) 
-          ? { 
-              ...c, 
-              raised: c.raised + amount, 
-              backers: c.backers + 1,
-              lastDonation: {
-                amount,
-                timestamp: new Date().toISOString(),
-                txHash: result.txHash
-              }
-            }
-          : c
+      return new ethers.Contract(
+        CONTRACT_ADDRESS,
+        CONTRACT_ABI,
+        new ethers.JsonRpcProvider('https://apechain.calderachain.xyz/http')
       );
-      setCampaigns(updatedCampaigns);
-
-      // Refresh from blockchain after delay to get accurate data
-      setTimeout(async () => {
-        try {
-          const refreshedCampaigns = await loadCampaignsFromChain();
-          setCampaigns(refreshedCampaigns);
-        } catch (error) {
-          console.warn('Could not refresh from blockchain:', error);
-        }
-      }, 3000);
-
-      return { success: true, txHash: result.txHash };
-
     } catch (error) {
-      console.error('❌ Failed to process donation:', error);
-      throw error;
+      console.error('Failed to create read contract:', error);
+      return null;
     }
-  }, [campaigns, donateToChain, loadCampaignsFromChain, isConnected, isCorrectNetwork]);
+  }, [ethers, isClient]);
 
-  // Delete campaign (only local campaigns)
-  const deleteCampaign = useCallback((campaignId) => {
-    const campaignToDelete = campaigns.find(c => c.id === campaignId);
-    
-    if (campaignToDelete && campaignToDelete.isFromBlockchain) {
-      throw new Error('Cannot delete blockchain campaigns. They exist permanently on ApeChain.');
-    }
-    
-    const updatedCampaigns = campaigns.filter(campaign => campaign.id !== campaignId);
-    setCampaigns(updatedCampaigns);
-    saveCampaigns(updatedCampaigns);
-    
-    return { success: true, deletedId: campaignId };
-  }, [campaigns, saveCampaigns]);
+  // Get write contract instance
+  const getWriteContract = useCallback(async () => {
+    if (!ethers || !walletClient || !isConnected || !isCorrectNetwork || !isClient) return null;
 
-  // Refresh campaigns from blockchain
-  const refreshFromBlockchain = useCallback(async () => {
     try {
-      setIsLoading(true);
-      console.log('🔄 Refreshing campaigns from blockchain...');
-      
-      const blockchainCampaigns = await loadCampaignsFromChain();
-      const localCampaigns = loadLocalCampaigns();
-      
-      // Combine blockchain + local (non-blockchain) campaigns
-      const allCampaigns = [...blockchainCampaigns];
-      localCampaigns.forEach(local => {
-        const existsOnBlockchain = blockchainCampaigns.some(
-          bc => bc.title === local.title && bc.creator === local.creator
-        );
-        if (!existsOnBlockchain) {
-          allCampaigns.push({
-            ...local,
-            isLocalOnly: true
-          });
-        }
-      });
-      
-      setCampaigns(allCampaigns);
-      console.log(`✅ Refreshed: ${allCampaigns.length} total campaigns`);
-      
-      return { success: true, total: allCampaigns.length };
+      const provider = new ethers.BrowserProvider(walletClient);
+      const signer = await provider.getSigner();
+      return new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
     } catch (error) {
-      console.error('❌ Failed to refresh from blockchain:', error);
+      console.error('Failed to get write contract:', error);
+      return null;
+    }
+  }, [ethers, walletClient, isConnected, isCorrectNetwork, isClient]);
+
+  // Create campaign on blockchain
+  const createCampaignOnChain = useCallback(async (campaignData) => {
+    if (!ethers || !isClient) {
+      throw new Error('Blockchain dependencies not loaded');
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (!isConnected) throw new Error('Wallet not connected');
+      if (!isCorrectNetwork) throw new Error('Please switch to ApeChain');
+
+      const contract = await getWriteContract();
+      if (!contract) throw new Error('Could not get contract instance');
+
+      console.log('📝 Creating campaign on blockchain...', campaignData);
+
+      // Ensure we have an IPFS CID (even if empty)
+      const ipfsCid = campaignData.ipfsCid || '';
+      
+      if (ipfsCid) {
+        console.log('📦 Using IPFS CID:', ipfsCid);
+      } else {
+        console.log('⚠️ No IPFS CID provided - metadata will be stored on blockchain only');
+      }
+
+      // Call smart contract with IPFS CID
+      const tx = await contract.createCampaign(
+        campaignData.title,
+        campaignData.description,
+        campaignData.category || 'Technology',
+        ipfsCid, // IPFS CID for metadata
+        campaignData.target, // Already in APE
+        campaignData.durationInDays || 30
+      );
+
+      console.log('⏳ Transaction sent:', tx.hash);
+      console.log('🔗 ApeScan:', `https://apescan.io/tx/${tx.hash}`);
+
+      // Wait for confirmation
+      const receipt = await tx.wait();
+      console.log('✅ Transaction confirmed:', receipt);
+
+      // Extract campaign ID from events
+      const campaignCreatedEvent = receipt.logs.find(
+        log => log.topics[0] === contract.interface.getEvent('CampaignCreated').topicHash
+      );
+
+      let campaignId = null;
+      if (campaignCreatedEvent) {
+        const parsedEvent = contract.interface.parseLog(campaignCreatedEvent);
+        campaignId = parsedEvent.args.campaignId.toString();
+      }
+
+      return {
+        success: true,
+        campaignId,
+        txHash: tx.hash,
+        blockNumber: receipt.blockNumber,
+        gasUsed: receipt.gasUsed.toString(),
+        ipfsCid: ipfsCid
+      };
+
+    } catch (error) {
+      console.error('❌ Smart contract error:', error);
+      setError(error.message);
       throw error;
     } finally {
       setIsLoading(false);
     }
-  }, [loadCampaignsFromChain]);
+  }, [ethers, isClient, isConnected, isCorrectNetwork, getWriteContract]);
 
-  // Clear local campaigns only
-  const clearAllCampaigns = useCallback(() => {
-    const blockchainCampaigns = campaigns.filter(campaign => campaign.isFromBlockchain);
-    setCampaigns(blockchainCampaigns);
-    localStorage.removeItem(CAMPAIGNS_STORAGE_KEY);
-    return { success: true };
-  }, [campaigns]);
-
-  // Enhanced statistics with blockchain data
-  const getStatistics = useCallback(async () => {
-    try {
-      // Get blockchain stats if available
-      const blockchainStats = await getBlockchainStats();
-      
-      // Calculate local stats
-      const localStats = {
-        totalCampaigns: campaigns.length,
-        blockchainCampaigns: campaigns.filter(c => c.isFromBlockchain).length,
-        localCampaigns: campaigns.filter(c => c.isLocal && !c.isFromBlockchain).length,
-        totalRaised: campaigns.reduce((sum, campaign) => sum + campaign.raised, 0),
-        totalBackers: campaigns.reduce((sum, campaign) => sum + campaign.backers, 0),
-        totalIPFSCampaigns: campaigns.filter(campaign => campaign.ipfsCid).length
-      };
-
-      return {
-        ...localStats,
-        blockchain: blockchainStats
-      };
-    } catch (error) {
-      console.error('Failed to get statistics:', error);
-      // Fallback to local stats only
-      return {
-        totalCampaigns: campaigns.length,
-        blockchainCampaigns: campaigns.filter(c => c.isFromBlockchain).length,
-        localCampaigns: campaigns.filter(c => c.isLocal && !c.isFromBlockchain).length,
-        totalRaised: campaigns.reduce((sum, campaign) => sum + campaign.raised, 0),
-        totalBackers: campaigns.reduce((sum, campaign) => sum + campaign.backers, 0),
-        totalIPFSCampaigns: campaigns.filter(campaign => campaign.ipfsCid).length,
-        blockchain: null
-      };
+  // Donate to campaign
+  const donateToChain = useCallback(async (campaignId, amountInAPE) => {
+    if (!ethers || !isClient) {
+      throw new Error('Blockchain dependencies not loaded');
     }
-  }, [campaigns, getBlockchainStats]);
 
-  // Get current statistics
-  const [statistics, setStatistics] = useState({});
-  useEffect(() => {
-    getStatistics().then(setStatistics);
-  }, [campaigns, getStatistics]);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (!isConnected) throw new Error('Wallet not connected');
+      if (!isCorrectNetwork) throw new Error('Please switch to ApeChain');
+
+      const contract = await getWriteContract();
+      if (!contract) throw new Error('Could not get contract instance');
+
+      const amountInWei = ethers.parseEther(amountInAPE.toString());
+
+      console.log('💰 Donating to campaign:', campaignId, 'Amount:', amountInAPE, 'APE');
+
+      const tx = await contract.donate(campaignId, { value: amountInWei });
+      console.log('⏳ Donation transaction sent:', tx.hash);
+
+      const receipt = await tx.wait();
+      console.log('✅ Donation confirmed:', receipt);
+
+      return {
+        success: true,
+        txHash: tx.hash,
+        blockNumber: receipt.blockNumber,
+        gasUsed: receipt.gasUsed.toString()
+      };
+
+    } catch (error) {
+      console.error('❌ Donation failed:', error);
+      setError(error.message);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [ethers, isClient, isConnected, isCorrectNetwork, getWriteContract]);
+
+  // Load all campaigns from blockchain with IPFS data
+  const loadCampaignsFromChain = useCallback(async () => {
+    if (!ethers || !isClient) {
+      console.log('⚠️ Blockchain dependencies not loaded, skipping blockchain load');
+      return [];
+    }
+
+    try {
+      const contract = getReadContract();
+      if (!contract) return [];
+
+      console.log('📥 Loading campaigns from blockchain...');
+      const campaigns = await contract.getAllCampaigns();
+
+      console.log(`⛓️ Found ${campaigns.length} campaigns on blockchain`);
+
+      // IPFS Gateways for fallback
+      const ipfsGateways = [
+        'https://tomato-petite-butterfly-553.mypinata.cloud/ipfs/',
+        'https://gateway.pinata.cloud/ipfs/',
+        'https://cloudflare-ipfs.com/ipfs/',
+        'https://dweb.link/ipfs/'
+      ];
+
+      // Helper function to load IPFS data
+      const loadIPFSData = async (cid) => {
+        if (!cid || cid.trim() === '') return null;
+
+        for (const gateway of ipfsGateways) {
+          try {
+            const url = `${gateway}${cid}`;
+            const response = await fetch(url, { 
+              timeout: 5000 // 5 second timeout
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              return {
+                ...data,
+                loadedFrom: gateway
+              };
+            }
+          } catch (error) {
+            console.warn(`Failed to load from ${gateway}${cid}:`, error.message);
+            continue;
+          }
+        }
+        
+        console.warn(`Could not load IPFS data for CID: ${cid}`);
+        return null;
+      };
+
+      // Process campaigns with IPFS data loading
+      const formattedCampaigns = await Promise.allSettled(
+        campaigns.map(async (campaign, index) => {
+          console.log(`📊 Processing campaign ${index + 1}/${campaigns.length}: ${campaign.title}`);
+
+          // 1. Extract blockchain data first
+          const blockchainData = {
+            id: campaign.id.toString(),
+            blockchainId: campaign.id.toString(),
+            creator: campaign.creator,
+            title: campaign.title,
+            description: campaign.description,
+            category: campaign.category,
+            target: parseFloat(ethers.formatEther(campaign.goal)),
+            raised: parseFloat(ethers.formatEther(campaign.raised)),
+            deadline: new Date(Number(campaign.deadline) * 1000).toISOString(),
+            status: CampaignStatus[campaign.status],
+            createdAt: new Date(Number(campaign.createdAt) * 1000).toISOString(),
+            donorCount: campaign.donorCount.toString(),
+            backers: parseInt(campaign.donorCount.toString()),
+            daysLeft: Math.max(0, Math.ceil((Number(campaign.deadline) * 1000 - Date.now()) / (1000 * 60 * 60 * 24))),
+            ipfsCid: campaign.ipfsCid,
+            isFromBlockchain: true,
+            isValid: true
+          };
+
+          // 2. Try to load IPFS data if CID exists
+          let ipfsData = null;
+          let campaignImage = getRandomImage(); // Fallback
+          
+          if (campaign.ipfsCid && campaign.ipfsCid.trim() !== '') {
+            try {
+              console.log(`📦 Loading IPFS data for: ${campaign.ipfsCid}`);
+              ipfsData = await loadIPFSData(campaign.ipfsCid);
+              
+              if (ipfsData) {
+                console.log(`✅ IPFS data loaded for: ${campaign.title}`);
+                
+                // Use IPFS image if available
+                if (ipfsData.image) {
+                  campaignImage = ipfsData.image;
+                }
+                
+                // Enhance blockchain data with IPFS data
+                if (ipfsData.description && ipfsData.description !== blockchainData.description) {
+                  blockchainData.fullDescription = ipfsData.description;
+                }
+                
+                if (ipfsData.additionalData) {
+                  blockchainData.additionalData = ipfsData.additionalData;
+                }
+              }
+            } catch (ipfsError) {
+              console.warn(`Failed to load IPFS data for ${campaign.title}:`, ipfsError.message);
+              // Continue with blockchain data only
+            }
+          }
+
+          // 3. Return complete campaign object
+          return {
+            ...blockchainData,
+            image: campaignImage,
+            ipfsData: ipfsData,
+            ipfsLoaded: !!ipfsData,
+            hasCustomImage: !!ipfsData?.image,
+            loadingSource: {
+              blockchain: true,
+              ipfs: !!ipfsData,
+              ipfsGateway: ipfsData?.loadedFrom || null
+            }
+          };
+        })
+      );
+
+      // Filter successful results
+      const successfulCampaigns = formattedCampaigns
+        .filter(result => result.status === 'fulfilled')
+        .map(result => result.value);
+
+      console.log(`✅ Successfully processed ${successfulCampaigns.length}/${campaigns.length} campaigns`);
+      
+      // Log statistics
+      const ipfsLoadedCount = successfulCampaigns.filter(c => c.ipfsLoaded).length;
+      const customImageCount = successfulCampaigns.filter(c => c.hasCustomImage).length;
+      
+      console.log(`📊 IPFS Integration Stats:`);
+      console.log(`- Campaigns with IPFS data: ${ipfsLoadedCount}/${successfulCampaigns.length}`);
+      console.log(`- Campaigns with custom images: ${customImageCount}/${successfulCampaigns.length}`);
+
+      return successfulCampaigns;
+
+    } catch (error) {
+      console.error('❌ Failed to load campaigns from blockchain:', error);
+      setError(error.message);
+      return [];
+    }
+  }, [ethers, isClient, getReadContract]);
+
+  // Get contract statistics
+  const getContractStats = useCallback(async () => {
+    if (!ethers || !isClient) return null;
+
+    try {
+      const contract = getReadContract();
+      if (!contract) return null;
+
+      const stats = await contract.getContractStats();
+      
+      return {
+        totalCampaigns: stats[0].toString(),
+        activeCampaigns: stats[1].toString(),
+        successfulCampaigns: stats[2].toString(),
+        totalEscrowAmount: parseFloat(ethers.formatEther(stats[3])),
+        platformFeesAccumulated: parseFloat(ethers.formatEther(stats[4]))
+      };
+
+    } catch (error) {
+      console.error('❌ Failed to get contract stats:', error);
+      return null;
+    }
+  }, [ethers, isClient, getReadContract]);
+
+  // Withdraw funds (for creators)
+  const withdrawFunds = useCallback(async (campaignId) => {
+    if (!ethers || !isClient) {
+      throw new Error('Blockchain dependencies not loaded');
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (!isConnected) throw new Error('Wallet not connected');
+      if (!isCorrectNetwork) throw new Error('Please switch to ApeChain');
+
+      const contract = await getWriteContract();
+      if (!contract) throw new Error('Could not get contract instance');
+
+      const tx = await contract.withdrawFunds(campaignId);
+      console.log('⏳ Withdrawal transaction sent:', tx.hash);
+
+      const receipt = await tx.wait();
+      console.log('✅ Withdrawal confirmed:', receipt);
+
+      return {
+        success: true,
+        txHash: tx.hash
+      };
+
+    } catch (error) {
+      console.error('❌ Withdrawal failed:', error);
+      setError(error.message);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [ethers, isClient, isConnected, isCorrectNetwork, getWriteContract]);
+
+  // Claim refund
+  const claimRefund = useCallback(async (campaignId) => {
+    if (!ethers || !isClient) {
+      throw new Error('Blockchain dependencies not loaded');
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (!isConnected) throw new Error('Wallet not connected');
+      if (!isCorrectNetwork) throw new Error('Please switch to ApeChain');
+
+      const contract = await getWriteContract();
+      if (!contract) throw new Error('Could not get contract instance');
+
+      const tx = await contract.claimRefund(campaignId);
+      console.log('⏳ Refund transaction sent:', tx.hash);
+
+      const receipt = await tx.wait();
+      console.log('✅ Refund confirmed:', receipt);
+
+      return {
+        success: true,
+        txHash: tx.hash
+      };
+
+    } catch (error) {
+      console.error('❌ Refund failed:', error);
+      setError(error.message);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [ethers, isClient, isConnected, isCorrectNetwork, getWriteContract]);
 
   return {
-    campaigns,
+    // State
     isLoading,
-    statistics,
-    createCampaign,
-    deleteCampaign,
-    addDonation,
-    clearAllCampaigns,
-    refreshFromBlockchain,
-    
-    // Blockchain specific
+    error,
     isConnected,
-    isCorrectNetwork
+    isCorrectNetwork,
+    contractAddress: CONTRACT_ADDRESS,
+    isClient, // Export for checking if blockchain features are available
+    
+    // Functions (only work client-side)
+    createCampaignOnChain: isClient ? createCampaignOnChain : async () => { throw new Error('Blockchain not available server-side'); },
+    donateToChain: isClient ? donateToChain : async () => { throw new Error('Blockchain not available server-side'); },
+    loadCampaignsFromChain: isClient ? loadCampaignsFromChain : async () => [],
+    getContractStats: isClient ? getContractStats : async () => null,
+    withdrawFunds: isClient ? withdrawFunds : async () => { throw new Error('Blockchain not available server-side'); },
+    claimRefund: isClient ? claimRefund : async () => { throw new Error('Blockchain not available server-side'); },
+    
+    // Utils
+    clearError: () => setError(null)
   };
 };
 
-// Helper: Random images for campaigns
+// Helper function for random images
 const getRandomImage = () => {
   const images = [
     'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&h=300&fit=crop',
