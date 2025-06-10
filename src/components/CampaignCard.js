@@ -114,17 +114,6 @@ const CampaignCard = ({
   </span>
 </div>
 
-{/* Campaign Type - Ganz unten */}
-<div className="absolute top-24 left-4">
-  <span className={`text-xs px-2 py-1 rounded-full ${
-    campaign.isFromBlockchain 
-      ? 'bg-blue-500 text-white' 
-      : 'bg-gray-500 text-white'
-  }`}>
-    {campaign.isFromBlockchain ? '⛓️ Apechain' : '📱 Local'}
-  </span>
-</div>
-
 {/* Completion Badge für funded campaigns - Rechts oben */}
 {status.status === 'completed' && (
   <div className="absolute top-4 right-20">
@@ -134,69 +123,6 @@ const CampaignCard = ({
   </div>
 )}
 
-        {/* IPFS & Actions - NEU: unten rechts mit blauem Hintergrund */}
-<div className="absolute bottom-4 right-4 flex gap-2">
-  {campaign.ipfsCid && (
-    <div className="flex gap-1">
-      <button
-        onClick={copyIPFSUrl}
-        className="bg-blue-500 bg-opacity-80 text-white p-2 rounded-full hover:bg-blue-600 hover:bg-opacity-100 transition-all"
-        title={copied ? 'Copied!' : 'Copy IPFS URL'}
-      >
-        <Copy className="w-4 h-4" />
-      </button>
-      <button
-        onClick={openIPFS}
-        className="bg-blue-500 bg-opacity-80 text-white p-2 rounded-full hover:bg-blue-600 hover:bg-opacity-100 transition-all"
-        title="Open on IPFS"
-      >
-        <ExternalLink className="w-4 h-4" />
-      </button>
-    </div>
-  )}
-  
-  {/* Delete Button (nur für Owner) */}
-  {isOwner && showDeleteButton && (
-    <button
-      onClick={() => setShowActions(!showActions)}
-      className="bg-red-500 bg-opacity-80 text-white p-2 rounded-full hover:bg-red-600 hover:bg-opacity-100 transition-all"
-      title="Delete Campaign"
-    >
-      <Trash2 className="w-4 h-4" />
-    </button>
-  )}
-</div>
-
-        {/* Delete Confirmation */}
-        {showActions && isOwner && (
-          <div className="absolute inset-0 bg-black bg-opacity-80 flex items-center justify-center">
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg max-w-xs mx-4">
-              <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                Delete Campaign?
-              </h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                This will remove the campaign from your local storage. IPFS data will remain accessible.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowActions(false)}
-                  className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    onDelete(campaign.id);
-                    setShowActions(false);
-                  }}
-                  className="flex-1 px-3 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
       
       <div className="p-6">
@@ -204,11 +130,6 @@ const CampaignCard = ({
           <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 flex-1">
             {campaign.title}
           </h3>
-          {campaign.ipfsCid && (
-            <span className="ml-2 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">
-              IPFS
-            </span>
-          )}
         </div>
         
         <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">

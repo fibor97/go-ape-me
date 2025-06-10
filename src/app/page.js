@@ -122,12 +122,7 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate, isConnected, isCorre
               <span className="text-gray-800 dark:text-gray-200">Remaining:</span>
               <span className="font-semibold text-purple-600 dark:text-purple-400">{remainingToGoal.toFixed(2)} APE</span>
             </div>
-            <div className="flex justify-between items-center mt-2">
-              <span className="text-gray-800 dark:text-gray-200">Campaign Type:</span>
-              <span className="text-sm px-2 py-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                {campaign.isFromBlockchain ? '⛓️ Blockchain' : '📱 Local'}
-              </span>
-            </div>
+            
           </div>
         </div>
 
@@ -681,7 +676,7 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
               <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-2">
                 {statistics.totalBackers}
               </h3>
-              <p className="text-gray-600 dark:text-gray-400">Supporters</p>
+              <p className="text-gray-600 dark:text-gray-400">Supporter</p>
             </div>
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg transition-colors duration-300">
               <div className="text-3xl mb-4">🚀</div>
@@ -749,9 +744,9 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                    {filteredActiveCampaigns.reduce((sum, c) => sum + (c.donorCount || 0), 0)}
+                    {filteredActiveCampaigns.reduce((sum, c) => sum + Number(c.donorCount || 0), 0)}
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Backers</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Supporter</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-green-600 dark:text-green-400">
@@ -858,9 +853,9 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">
-                    {filteredCompletedCampaigns.reduce((sum, c) => sum + (c.donorCount || 0), 0)}
+                    {filteredCompletedCampaigns.reduce((sum, c) => sum + Number(c.donorCount || 0), 0)}
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Happy Backers</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Happy Supporter</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-green-700 dark:text-green-300">
