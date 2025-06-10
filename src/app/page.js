@@ -436,7 +436,7 @@ export default function GoApeMe() {
           <div className="flex justify-between items-center h-16 min-h-[4rem]">
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
   <img 
-    src="/apecrowd_logo_transparent.PNG" 
+    src="/apecrowd_logo_transparent.png" 
     alt="APECrowd Logo" 
     className="h-8 w-8 sm:h-10 sm:w-10 object-contain"
   />
@@ -629,7 +629,7 @@ export default function GoApeMe() {
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex justify-center mb-4">
   <img 
-    src="/apecrowd_logo_transparent.PNG" 
+    src="/apecrowd_logo_transparent.png" 
     alt="APECrowd Logo" 
     className="h-16 w-16 object-contain"
   />
