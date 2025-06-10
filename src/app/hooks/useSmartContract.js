@@ -42,9 +42,22 @@ export const useSmartContract = () => {
   const [ethers, setEthers] = useState(null);
   const [isClient, setIsClient] = useState(false);
   
-  const { address, isConnected, chain } = useAccount();
-  const publicClient = usePublicClient();
-  const { data: walletClient } = useWalletClient();
+  // Safe Wagmi hooks with try-catch
+  let account, publicClient, walletClient;
+  
+  try {
+    account = useAccount();
+    publicClient = usePublicClient();
+    const walletHook = useWalletClient();
+    walletClient = walletHook.data;
+  } catch (error) {
+    console.warn('Wagmi hooks not ready yet:', error.message);
+    account = { address: undefined, isConnected: false, chain: undefined };
+    publicClient = null;
+    walletClient = null;
+  }
+  
+  const { address, isConnected, chain } = account;
 
   // Check if on correct network
   const isCorrectNetwork = chain?.id === APECHAIN_ID;

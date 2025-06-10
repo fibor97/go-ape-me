@@ -285,8 +285,6 @@ export default function GoApeMe() {
     loadCampaignFromIPFS,
     clearAllCampaigns
   } = useCampaignManager();
-
-  const { refreshFromRegistry } = useIPFSRegistry();
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
@@ -432,7 +430,7 @@ export default function GoApeMe() {
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg transition-colors duration-300">
               <div className="text-3xl mb-4">💰</div>
               <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-                {statistics.totalRaised.toFixed(1)} APE
+                {(statistics.totalRaised || 0).toFixed(1)} APE
               </h3>
               <p className="text-gray-600 dark:text-gray-400">Total Raised</p>
             </div>
