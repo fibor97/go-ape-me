@@ -435,11 +435,15 @@ export default function GoApeMe() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 min-h-[4rem]">
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              <div className="text-2xl sm:text-3xl">🦍</div>
-              <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                APECrowd
-              </h1>
-            </div>
+  <img 
+    src="/apecrowd_logo_transparent.PNG" 
+    alt="APECrowd Logo" 
+    className="h-8 w-8 sm:h-10 sm:w-10 object-contain"
+  />
+  <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+    APECrowd
+  </h1>
+</div>
             
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
               {/* Network Warning */}
@@ -623,7 +627,13 @@ export default function GoApeMe() {
       {/* Footer */}
       <footer className="bg-gray-800 dark:bg-gray-900 text-white py-12 px-4 transition-colors duration-300">
         <div className="max-w-7xl mx-auto text-center">
-          <div className="text-4xl mb-4">🦍</div>
+          <div className="flex justify-center mb-4">
+  <img 
+    src="/apecrowd_logo_transparent.PNG" 
+    alt="APECrowd Logo" 
+    className="h-16 w-16 object-contain"
+  />
+</div>
           <h3 className="text-2xl font-bold mb-4">APECrowd sponsored by Rida</h3>
           <p className="text-gray-400 mb-6">
             The decentralized crowdfunding platform on ApeChain
