@@ -93,7 +93,7 @@ export const useStoracha = () => {
     }
   }, []);
 
-  // Retrieve campaign data from IPFS
+  // Retrieve campaign data from IPFS with multiple gateways
   const getCampaignData = useCallback(async (cid) => {
     try {
       if (!cid) {
@@ -102,26 +102,48 @@ export const useStoracha = () => {
 
       console.log('📥 Fetching campaign data from IPFS:', cid);
       
-      const response = await fetch(`https://${cid}.ipfs.w3s.link`);
+      // FIXED: Multiple IPFS gateways with CID properly appended
+      const gateways = [
+        `https://tomato-petite-butterfly-553.mypinata.cloud/ipfs/${cid}`,
+        `https://gateway.pinata.cloud/ipfs/${cid}`,
+        `https://cloudflare-ipfs.com/ipfs/${cid}`,
+        `https://dweb.link/ipfs/${cid}`
+      ];
       
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('Campaign-Daten nicht gefunden');
-        } else {
-          throw new Error(`Fehler beim Laden: ${response.statusText}`);
+      let lastError = null;
+      
+      // Try each gateway in sequence
+      for (const url of gateways) {
+        try {
+          console.log('🔗 Trying gateway:', url);
+          const response = await fetch(url);
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Campaign data retrieved from:', url);
+            return data;
+          } else {
+            console.warn(`❌ Gateway failed (${response.status}):`, url);
+            lastError = new Error(`Gateway error: ${response.statusText}`);
+          }
+        } catch (error) {
+          console.warn(`❌ Gateway error:`, url, error.message);
+          lastError = error;
+          continue;
         }
       }
       
-      const data = await response.json();
-      console.log('✅ Campaign data retrieved:', data.title);
+      // If all gateways failed
+      throw lastError || new Error('All IPFS gateways failed');
       
-      return data;
     } catch (error) {
       console.error('❌ Failed to retrieve campaign data:', error);
       
       let userMessage = error.message;
       if (error.message.includes('Failed to fetch')) {
         userMessage = 'Netzwerk-Fehler beim Laden der Campaign-Daten.';
+      } else if (error.message.includes('All IPFS gateways failed')) {
+        userMessage = 'Campaign-Daten konnten von keinem IPFS-Gateway geladen werden. Versuchen Sie es später erneut.';
       }
       
       setError(userMessage);

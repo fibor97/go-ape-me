@@ -87,9 +87,9 @@ export const useCampaignManager = () => {
         backers: 0,
         daysLeft: 30,
         createdAt: new Date().toISOString(),
-        // IPFS Integration
+        // IPFS Integration - FIXED: Use the URL from ipfsResult
         ipfsCid: ipfsResult.cid,
-        ipfsUrl: ipfsResult.url,
+        ipfsUrl: ipfsResult.url, // This comes from the API response with correct gateway
         ipfsData: ipfsResult.metadata,
         // Bild: Verwende Custom Image oder zufälliges Bild
         image: campaignData.hasCustomImage && campaignData.image ? campaignData.image : getRandomImage(),
@@ -155,6 +155,12 @@ export const useCampaignManager = () => {
     return updateCampaign(campaignId, updates);
   }, [campaigns, updateCampaign]);
 
+  // FIXED: Generate proper IPFS URL for imported campaigns
+  const generateIPFSUrl = (cid) => {
+    // Use Pinata Dedicated Gateway as primary option
+    return `https://tomato-petite-butterfly-553.mypinata.cloud/ipfs/${cid}`;
+  };
+
   // Lade Kampagne von IPFS (für externe CIDs)
   const loadCampaignFromIPFS = useCallback(async (cid) => {
     try {
@@ -179,7 +185,7 @@ export const useCampaignManager = () => {
         daysLeft: 30,
         createdAt: ipfsData.createdAt || new Date().toISOString(),
         ipfsCid: cid,
-        ipfsUrl: `https://${cid}.ipfs.w3s.link`,
+        ipfsUrl: generateIPFSUrl(cid), // FIXED: Use proper gateway URL
         ipfsData: ipfsData,
         image: getRandomImage(),
         isValid: true,
