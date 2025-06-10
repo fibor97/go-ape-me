@@ -7,6 +7,10 @@ import { useCampaignManager } from './hooks/useCampaignManager';
 import CreateCampaignModal from '../components/CreateCampaignModal';
 import CampaignCard from '../components/CampaignCard';
 import WalletModal from '../components/WalletModal';
+import { useRouter } from 'next/navigation';
+import { BarChart3, Trophy } from 'lucide-react';
+import CelebrationFireworks from '../components/CelebrationFireworks';
+import { getCampaignStatus, campaignFilters, filterCampaigns } from './hooks/useCampaignManager';
 
 // Dark Mode Hook (permanent dark)
 const useDarkMode = () => {
@@ -493,6 +497,10 @@ export default function GoApeMe() {
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [filter, setFilter] = useState('All');
+  const router = useRouter();
+const [campaignFilter, setCampaignFilter] = useState('active');
+const [showCelebration, setShowCelebration] = useState(false);
+const [celebrationCampaign, setCelebrationCampaign] = useState(null);
   
   const categories = ['All', 'Technology', 'Environment', 'Social', 'Art', 'Education'];
   
@@ -517,8 +525,20 @@ export default function GoApeMe() {
     setIsDonateModalOpen(false);
     setSelectedCampaign(null);
     
-    // This will now trigger real smart contract donation
+    // Check if campaign will be completed by this donation
+    const campaign = campaigns.find(c => c.id === campaignId);
+    const oldProgress = campaign.target > 0 ? (campaign.raised / campaign.target) * 100 : 0;
+    const newProgress = campaign.target > 0 ? ((campaign.raised + amount) / campaign.target) * 100 : 0;
+    const willComplete = oldProgress < 100 && newProgress >= 100;
+    
+    // Process donation
     await addDonation(campaignId, amount);
+    
+    // Show celebration if campaign just got completed
+    if (willComplete) {
+      setCelebrationCampaign(campaign);
+      setShowCelebration(true);
+    }
     
     console.log('✅ Donation completed successfully');
   } catch (error) {
@@ -580,6 +600,7 @@ export default function GoApeMe() {
                 </div>
               )}
               
+              
               {isConnected && (
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
@@ -589,6 +610,17 @@ export default function GoApeMe() {
                   Create Campaign
                 </button>
               )}
+
+              {/* Dashboard Button - NEU */}
+{isConnected && (
+  <button
+    onClick={() => router.push('/dashboard')}
+    className="hidden sm:flex bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors items-center gap-2"
+  >
+    <BarChart3 className="w-5 h-5" />
+    Dashboard
+  </button>
+)}
               
               {isConnected && (
                 <button
@@ -662,92 +694,219 @@ export default function GoApeMe() {
         </div>
       </section>
       
-      {/* Campaigns Section */}
-      <section className="py-16 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4 md:mb-0">
-              {isLoading ? 'Loading Campaigns...' : 'Current Campaigns'}
-            </h2>
-            
-            <div className="flex flex-wrap gap-2">
-              {categories.map(category => (
-                <button
-                  key={category}
-                  onClick={() => setFilter(category)}
-                  className={`px-4 py-2 rounded-full font-medium transition-all duration-300 ${
-                    filter === category
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                      : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          {/* Loading State */}
-          {isLoading && (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
-            </div>
-          )}
-
-          {/* No Campaigns State */}
-          {!isLoading && campaigns.length === 0 && (
-            <div className="text-center py-20">
-              <div className="text-6xl mb-4">🦍</div>
-              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                No campaigns yet
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                {isConnected ? 'Be the first to create a campaign!' : 'Connect your wallet to create the first campaign!'}
-              </p>
-              {isConnected && (
-                <button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center gap-2 mx-auto"
-                >
-                  <Plus className="w-5 h-5" />
-                  Create First Campaign
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Campaigns Grid */}
-          {!isLoading && filteredCampaigns.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredCampaigns.map(campaign => (
-  <CampaignCard 
-    key={campaign.id} 
-    campaign={campaign} 
-    onDonate={openDonateModal}
-    onDelete={handleDeleteCampaign}
-    currentUserAddress={address}
-    isConnected={isConnected}
-    isCorrectNetwork={isCorrectNetwork}
-    onConnectWallet={connect}
-  />
-))}
-            </div>
-          )}
-
-          {/* Filtered Empty State */}
-          {!isLoading && campaigns.length > 0 && filteredCampaigns.length === 0 && (
-            <div className="text-center py-20">
-              <div className="text-4xl mb-4">🔍</div>
-              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                No campaigns in "{filter}" category
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Try selecting a different category or create a new campaign.
-              </p>
-            </div>
-          )}
+      {/* Enhanced Campaigns Section - Split Active/Completed */}
+<section className="py-16 px-4">
+  <div className="max-w-7xl mx-auto">
+    
+    {/* ACTIVE CAMPAIGNS SECTION */}
+    <div className="mb-16">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4 md:mb-0">
+          🚀 Active Campaigns
+        </h2>
+        
+        {/* Category Filter für Active */}
+        <div className="flex flex-wrap gap-2">
+          {categories.map(category => (
+            <button
+              key={category}
+              onClick={() => setFilter(category)}
+              className={`px-4 py-2 rounded-full font-medium transition-all duration-300 ${
+                filter === category
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+            >
+              {category}
+            </button>
+          ))}
         </div>
-      </section>
+      </div>
+
+      {/* Active Campaigns Grid */}
+      {(() => {
+        const activeCampaigns = filterCampaigns(campaigns, 'active');
+        const filteredActiveCampaigns = filter === 'All' 
+          ? activeCampaigns 
+          : activeCampaigns.filter(campaign => campaign.category === filter);
+        
+        return (
+          <>
+            {/* Active Stats */}
+            <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {filteredActiveCampaigns.length}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Active</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    {filteredActiveCampaigns.reduce((sum, c) => sum + c.raised, 0).toFixed(1)} APE
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Raised</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                    {filteredActiveCampaigns.reduce((sum, c) => sum + (c.donorCount || 0), 0)}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Backers</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {filteredActiveCampaigns.reduce((sum, c) => sum + c.target, 0).toFixed(1)} APE
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Goal</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Active Campaigns Display */}
+            {isLoading ? (
+              <div className="flex justify-center items-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+              </div>
+            ) : filteredActiveCampaigns.length === 0 ? (
+              <div className="text-center py-20">
+                <div className="text-6xl mb-4">🚀</div>
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                  No active campaigns
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  {campaigns.length === 0 
+                    ? 'Be the first to create a campaign!' 
+                    : 'All campaigns have been completed or expired.'
+                  }
+                </p>
+                {isConnected && campaigns.length === 0 && (
+                  <button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center gap-2 mx-auto"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Create First Campaign
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {filteredActiveCampaigns.map(campaign => (
+                  <CampaignCard 
+                    key={campaign.id} 
+                    campaign={campaign} 
+                    onDonate={openDonateModal}
+                    onDelete={handleDeleteCampaign}
+                    currentUserAddress={address}
+                    isConnected={isConnected}
+                    isCorrectNetwork={isCorrectNetwork}
+                    onConnectWallet={connect}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        );
+      })()}
+    </div>
+
+    {/* COMPLETED CAMPAIGNS SECTION */}
+    <div>
+      <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4 md:mb-0">
+          🏆 Completed Campaigns
+        </h2>
+        
+        {/* Time Filter für Completed */}
+        <div className="flex flex-wrap gap-2">
+          <select
+            value={campaignFilter}
+            onChange={(e) => setCampaignFilter(e.target.value)}
+            className="px-4 py-2 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="all">All Completed</option>
+            <option value="last30">Last 30 Days</option>
+            <option value="last90">Last 90 Days</option>
+            <option value="thisYear">This Year</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Completed Campaigns Grid */}
+      {(() => {
+        const completedCampaigns = filterCampaigns(campaigns, 'completed');
+        const filteredCompletedCampaigns = filter === 'All' 
+          ? completedCampaigns 
+          : completedCampaigns.filter(campaign => campaign.category === filter);
+        
+        return (
+          <>
+            {/* Completed Stats */}
+            <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {filteredCompletedCampaigns.length}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Completed</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {filteredCompletedCampaigns.reduce((sum, c) => sum + c.raised, 0).toFixed(1)} APE
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Total Funded</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">
+                    {filteredCompletedCampaigns.reduce((sum, c) => sum + (c.donorCount || 0), 0)}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Happy Backers</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-green-700 dark:text-green-300">
+                    {filteredCompletedCampaigns.length > 0 
+                      ? (filteredCompletedCampaigns.reduce((sum, c) => sum + (c.raised / c.target), 0) / filteredCompletedCampaigns.length * 100).toFixed(0)
+                      : 0
+                    }%
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Avg Success</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Completed Campaigns Display */}
+            {filteredCompletedCampaigns.length === 0 ? (
+              <div className="text-center py-20">
+                <div className="text-6xl mb-4">🏆</div>
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                  No completed campaigns yet
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Completed campaigns will appear here once they reach their funding goals.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {filteredCompletedCampaigns.map(campaign => (
+                  <CampaignCard 
+                    key={campaign.id} 
+                    campaign={campaign} 
+                    onDonate={openDonateModal}
+                    onDelete={handleDeleteCampaign}
+                    currentUserAddress={address}
+                    isConnected={isConnected}
+                    isCorrectNetwork={isCorrectNetwork}
+                    onConnectWallet={connect}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        );
+      })()}
+    </div>
+  </div>
+</section>
       
       {/* Footer */}
       <footer className="bg-gray-800 dark:bg-gray-900 text-white py-12 px-4 transition-colors duration-300">
@@ -807,6 +966,16 @@ export default function GoApeMe() {
   onRefreshRegistry={handleRefreshRegistry}
   statistics={statistics}
 />
+{/* Celebration Fireworks - ganz am Ende hinzufügen */}
+<CelebrationFireworks
+  isVisible={showCelebration}
+  campaignTitle={celebrationCampaign?.title}
+  onComplete={() => {
+    setShowCelebration(false);
+    setCelebrationCampaign(null);
+  }}
+/>
     </div>
+    
   );
 }

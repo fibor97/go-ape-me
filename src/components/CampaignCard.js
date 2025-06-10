@@ -1,6 +1,7 @@
 // Updated CampaignCard Component
 
-import { Heart, Clock, Users, Trash2, ExternalLink, Copy, Wallet } from 'lucide-react';
+import { getCampaignStatus } from '../app/hooks/useCampaignManager';
+import { Heart, Clock, Users, Trash2, ExternalLink, Copy, Wallet, Trophy } from 'lucide-react';
 import { useState } from 'react';
 
 const CampaignCard = ({ 
@@ -13,6 +14,7 @@ const CampaignCard = ({
   isCorrectNetwork = false,
   onConnectWallet
 }) => {
+  const status = getCampaignStatus(campaign);
   const [showActions, setShowActions] = useState(false);
   const [copied, setCopied] = useState(false);
   
@@ -92,56 +94,78 @@ const CampaignCard = ({
           }}
         />
         
-        {/* Category Badge */}
-        <div className="absolute top-4 left-4">
-          <span className="bg-purple-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-            {campaign.category}
-          </span>
-        </div>
+        {/* Status Badge - Links oben */}
+<div className="absolute top-4 left-4">
+  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+    status.status === 'completed' 
+      ? 'bg-green-500 text-white'
+      : status.status === 'expired'
+      ? 'bg-red-500 text-white'
+      : 'bg-blue-500 text-white'
+  }`}>
+    {status.label}
+  </span>
+</div>
 
-        {/* Campaign Type Indicator */}
-        <div className="absolute top-4 left-4 mt-10">
-          <span className={`text-xs px-2 py-1 rounded-full ${
-            campaign.isFromBlockchain 
-              ? 'bg-blue-500 text-white' 
-              : 'bg-gray-500 text-white'
-          }`}>
-            {campaign.isFromBlockchain ? '⛓️ Blockchain' : '📱 Local'}
-          </span>
-        </div>
+{/* Category Badge - Darunter */}
+<div className="absolute top-14 left-4">
+  <span className="bg-purple-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+    {campaign.category}
+  </span>
+</div>
 
-        {/* IPFS & Actions */}
-        <div className="absolute top-4 right-4 flex gap-2">
-          {campaign.ipfsCid && (
-            <div className="flex gap-1">
-              <button
-                onClick={copyIPFSUrl}
-                className="bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all"
-                title={copied ? 'Copied!' : 'Copy IPFS URL'}
-              >
-                <Copy className="w-4 h-4" />
-              </button>
-              <button
-                onClick={openIPFS}
-                className="bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all"
-                title="Open on IPFS"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-          
-          {/* Delete Button (nur für Owner) */}
-          {isOwner && showDeleteButton && (
-            <button
-              onClick={() => setShowActions(!showActions)}
-              className="bg-red-500 bg-opacity-80 text-white p-2 rounded-full hover:bg-opacity-100 transition-all"
-              title="Delete Campaign"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+{/* Campaign Type - Ganz unten */}
+<div className="absolute top-24 left-4">
+  <span className={`text-xs px-2 py-1 rounded-full ${
+    campaign.isFromBlockchain 
+      ? 'bg-blue-500 text-white' 
+      : 'bg-gray-500 text-white'
+  }`}>
+    {campaign.isFromBlockchain ? '⛓️ Apechain' : '📱 Local'}
+  </span>
+</div>
+
+{/* Completion Badge für funded campaigns - Rechts oben */}
+{status.status === 'completed' && (
+  <div className="absolute top-4 right-20">
+    <div className="bg-green-400 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+      🎉 Funded
+    </div>
+  </div>
+)}
+
+        {/* IPFS & Actions - NEU: unten rechts mit blauem Hintergrund */}
+<div className="absolute bottom-4 right-4 flex gap-2">
+  {campaign.ipfsCid && (
+    <div className="flex gap-1">
+      <button
+        onClick={copyIPFSUrl}
+        className="bg-blue-500 bg-opacity-80 text-white p-2 rounded-full hover:bg-blue-600 hover:bg-opacity-100 transition-all"
+        title={copied ? 'Copied!' : 'Copy IPFS URL'}
+      >
+        <Copy className="w-4 h-4" />
+      </button>
+      <button
+        onClick={openIPFS}
+        className="bg-blue-500 bg-opacity-80 text-white p-2 rounded-full hover:bg-blue-600 hover:bg-opacity-100 transition-all"
+        title="Open on IPFS"
+      >
+        <ExternalLink className="w-4 h-4" />
+      </button>
+    </div>
+  )}
+  
+  {/* Delete Button (nur für Owner) */}
+  {isOwner && showDeleteButton && (
+    <button
+      onClick={() => setShowActions(!showActions)}
+      className="bg-red-500 bg-opacity-80 text-white p-2 rounded-full hover:bg-red-600 hover:bg-opacity-100 transition-all"
+      title="Delete Campaign"
+    >
+      <Trash2 className="w-4 h-4" />
+    </button>
+  )}
+</div>
 
         {/* Delete Confirmation */}
         {showActions && isOwner && (

@@ -421,3 +421,132 @@ const getRandomImage = () => {
   // ApeChain branded fallback image
   return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSIzMDAiIGZpbGw9IiMwMDAwMDAiLz48cmVjdCB4PSI0MCIgeT0iODAiIHdpZHRoPSIzMjAiIGhlaWdodD0iMTQwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjgiLz48dGV4dCB4PSIyMDAiIHk9IjE3NSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjQ4IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGxldHRlci1zcGFjaW5nPSIzcHgiPkFQRUNIQUlOPC90ZXh0Pjwvc3ZnPg==";
 };
+
+// hooks/useCampaignManager.js - Enhanced Version
+
+// Zusätzliche Funktionen für den bestehenden useCampaignManager Hook:
+
+// Campaign Status Helper
+export const getCampaignStatus = (campaign) => {
+  const progress = campaign.target > 0 ? (campaign.raised / campaign.target) * 100 : 0;
+  const now = new Date();
+  const deadline = campaign.deadline ? new Date(campaign.deadline) : null;
+  const isExpired = deadline && deadline < now;
+  
+  if (progress >= 100) {
+    return {
+      status: 'completed',
+      label: 'Funded',
+      color: 'green',
+      completedAt: campaign.completedAt || now.toISOString()
+    };
+  }
+  
+  if (isExpired) {
+    return {
+      status: 'expired',
+      label: 'Expired',
+      color: 'red'
+    };
+  }
+  
+  return {
+    status: 'active',
+    label: 'Active',
+    color: 'blue'
+  };
+};
+
+// Filter Options
+export const campaignFilters = [
+  { value: 'active', label: 'Active Campaigns' },
+  { value: 'completed', label: 'Completed Campaigns' },
+  { value: 'all', label: 'All Campaigns' },
+  { value: 'last30', label: 'Last 30 Days' },
+  { value: 'last90', label: 'Last 90 Days' },
+  { value: 'thisYear', label: 'This Year' }
+];
+
+// Filter Function
+export const filterCampaigns = (campaigns, filter) => {
+  const now = new Date();
+  
+  switch (filter) {
+    case 'active':
+      return campaigns.filter(campaign => {
+        const status = getCampaignStatus(campaign);
+        return status.status === 'active';
+      });
+      
+    case 'completed':
+      return campaigns.filter(campaign => {
+        const status = getCampaignStatus(campaign);
+        return status.status === 'completed';
+      });
+      
+    case 'last30':
+      const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return campaigns.filter(campaign => {
+        const status = getCampaignStatus(campaign);
+        if (status.status !== 'completed') return false;
+        const completedDate = new Date(status.completedAt);
+        return completedDate >= last30Days;
+      });
+      
+    case 'last90':
+      const last90Days = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      return campaigns.filter(campaign => {
+        const status = getCampaignStatus(campaign);
+        if (status.status !== 'completed') return false;
+        const completedDate = new Date(status.completedAt);
+        return completedDate >= last90Days;
+      });
+      
+    case 'thisYear':
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      return campaigns.filter(campaign => {
+        const status = getCampaignStatus(campaign);
+        if (status.status !== 'completed') return false;
+        const completedDate = new Date(status.completedAt);
+        return completedDate >= startOfYear;
+      });
+      
+    case 'all':
+    default:
+      return campaigns;
+  }
+};
+
+// Enhanced addDonation function to detect completion
+export const enhancedAddDonation = async (campaignId, amount, campaigns, setCampaigns, onCampaignCompleted) => {
+  const campaignIndex = campaigns.findIndex(c => c.id === campaignId);
+  if (campaignIndex === -1) return;
+
+  const campaign = campaigns[campaignIndex];
+  const oldProgress = campaign.target > 0 ? (campaign.raised / campaign.target) * 100 : 0;
+  const newRaised = campaign.raised + amount;
+  const newProgress = campaign.target > 0 ? (newRaised / campaign.target) * 100 : 0;
+  
+  // Check if campaign just got completed
+  const wasCompleted = oldProgress >= 100;
+  const isNowCompleted = newProgress >= 100;
+  const justCompleted = !wasCompleted && isNowCompleted;
+
+  const updatedCampaign = {
+    ...campaign,
+    raised: newRaised,
+    donorCount: (campaign.donorCount || 0) + 1,
+    completedAt: justCompleted ? new Date().toISOString() : campaign.completedAt
+  };
+
+  const updatedCampaigns = [...campaigns];
+  updatedCampaigns[campaignIndex] = updatedCampaign;
+  setCampaigns(updatedCampaigns);
+
+  // Trigger celebration if just completed
+  if (justCompleted && onCampaignCompleted) {
+    onCampaignCompleted(updatedCampaign);
+  }
+
+  return updatedCampaign;
+};
