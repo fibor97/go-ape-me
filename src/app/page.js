@@ -611,7 +611,7 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
 {isConnected && (
   <button
     onClick={() => router.push('/dashboard')}
-    className="hidden sm:flex bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors items-center gap-2"
+    className="flex bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors items-center gap-2"
   >
     <BarChart3 className="w-5 h-5" />
     Dashboard

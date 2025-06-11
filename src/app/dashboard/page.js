@@ -273,7 +273,7 @@ const DonationRow = ({ campaign, donationAmount, onRefund, onReDonate }) => {
 export default function CreatorDashboard() {
   const router = useRouter();
   const { isConnected, address, connect } = useWalletConnection();
-  const { campaigns, statistics } = useCampaignManager();
+  const { campaigns, statistics , withdrawCampaignFunds } = useCampaignManager();
   
   // Filter campaigns and donations by current user
   const myCampaigns = campaigns.filter(campaign => 
@@ -306,10 +306,22 @@ export default function CreatorDashboard() {
   };
 
   // Action handlers
-  const handleWithdraw = (campaign) => {
-    console.log('Withdraw funds for:', campaign.title);
-    // TODO: Implement withdraw functionality
-  };
+  const handleWithdraw = async (campaign) => {
+  try {
+    console.log('💰 Withdrawing funds for:', campaign.title);
+    
+    const result = await withdrawCampaignFunds(campaign.blockchainId || campaign.id);
+    
+    alert(`✅ Withdrawal successful! 
+95% (${(campaign.raised * 0.95).toFixed(2)} APE) sent to your wallet
+5% (${(campaign.raised * 0.05).toFixed(2)} APE) platform fee
+Transaction: ${result.txHash}`);
+    
+  } catch (error) {
+    console.error('❌ Withdrawal failed:', error);
+    alert('Withdrawal failed: ' + error.message);
+  }
+};
 
   const handleAbort = (campaign) => {
     console.log('Abort campaign:', campaign.title);

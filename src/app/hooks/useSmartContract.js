@@ -11,6 +11,7 @@ const APECHAIN_ID = 33139;
 const CONTRACT_ABI = [
   "function createCampaign(string title, string description, string category, string ipfsCid, uint256 goalInAPE, uint256 durationInDays) external returns (uint256)",
   "function donate(uint256 campaignId) external payable",
+  "function withdrawFunds(uint256 campaignId) external",
   "function getAllCampaigns() external view returns (tuple(uint256 id, address creator, string title, string description, string category, string ipfsCid, uint256 goal, uint256 raised, uint256 deadline, uint8 status, uint256 createdAt, uint256 donorCount)[])",
   "function getContractStats() external view returns (uint256 totalCampaigns, uint256 activeCampaigns, uint256 successfulCampaigns, uint256 totalEscrowAmount, uint256 platformFeesAccumulated)",
   "function campaignCounter() external view returns (uint256)",
@@ -231,6 +232,59 @@ export const useSmartContract = () => {
     }
   }, [ethers, isClient, isConnected, isCorrectNetwork, getWriteContract]);
 
+// Withdraw funds from campaign
+const withdrawFunds = useCallback(async (campaignId) => {
+  if (!ethers || !isClient) {
+    throw new Error('Blockchain dependencies not loaded');
+  }
+
+  setIsLoading(true);
+  setError(null);
+
+  try {
+    if (!isConnected) throw new Error('Wallet not connected');
+    if (!isCorrectNetwork) throw new Error('Please switch to ApeChain');
+
+    const contract = await getWriteContract();
+    if (!contract) throw new Error('Could not get contract instance');
+
+    console.log('💰 Withdrawing funds for campaign:', campaignId);
+
+    const tx = await contract.withdrawFunds(campaignId);
+    console.log('⏳ Withdrawal transaction sent:', tx.hash);
+
+    const receipt = await tx.wait();
+    console.log('✅ Withdrawal confirmed:', receipt);
+
+    return {
+      success: true,
+      txHash: tx.hash,
+      blockNumber: receipt.blockNumber,
+      gasUsed: receipt.gasUsed.toString()
+    };
+
+  } catch (error) {
+    console.error('❌ Withdrawal failed:', error);
+    
+    let userMessage = error.message;
+    
+    if (error.code === 4001 || 
+        error.message?.includes('user rejected') ||
+        error.message?.includes('User denied')) {
+      throw new Error('CANCELLED_BY_USER');
+    } else if (error.message?.includes('Only creator allowed')) {
+      userMessage = 'Only the campaign creator can withdraw funds';
+    } else if (error.message?.includes('Campaign not successful')) {
+      userMessage = 'Campaign must reach its goal before withdrawal';
+    }
+    
+    setError(userMessage);
+    throw error;
+  } finally {
+    setIsLoading(false);
+  }
+}, [ethers, isClient, isConnected, isCorrectNetwork, getWriteContract]);
+
   // Load all campaigns from blockchain with IPFS data
   const loadCampaignsFromChain = useCallback(async () => {
     if (!ethers || !isClient) {
@@ -433,6 +487,7 @@ export const useSmartContract = () => {
     // Functions
     createCampaignOnChain: isClient ? createCampaignOnChain : async () => { throw new Error('Blockchain not available server-side'); },
     donateToChain: isClient ? donateToChain : async () => { throw new Error('Blockchain not available server-side'); },
+    withdrawFunds: isClient ? withdrawFunds : async () => { throw new Error('Blockchain not available server-side'); },
     loadCampaignsFromChain: isClient ? loadCampaignsFromChain : async () => [],
     getContractStats: isClient ? getContractStats : async () => null,
     

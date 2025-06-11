@@ -13,6 +13,7 @@ export const useCampaignManager = () => {
     donateToChain, 
     loadCampaignsFromChain,
     getContractStats,
+    withdrawFunds,
     isConnected,
     isCorrectNetwork,
     isClient
@@ -248,6 +249,39 @@ ipfsResult = await uploadCampaignData(metadataToUpload);
     }
   }, [campaigns, donateToChain, loadCampaignsFromChain, isConnected, isCorrectNetwork, isClient, saveCampaigns]);
 
+// Withdraw funds from campaign
+const withdrawCampaignFunds = useCallback(async (campaignId) => {
+  try {
+    if (!isConnected) {
+      throw new Error('Please connect your wallet to withdraw funds.');
+    }
+    
+    if (!isCorrectNetwork) {
+      throw new Error('Please switch to ApeChain to withdraw funds.');
+    }
+
+    console.log('💰 Withdrawing funds for campaign:', campaignId);
+    
+    const result = await withdrawFunds(campaignId);
+    console.log('✅ Withdrawal successful:', result);
+    
+    // Refresh campaigns after withdrawal
+    setTimeout(async () => {
+      try {
+        const refreshedCampaigns = await loadCampaignsFromChain();
+        setCampaigns(refreshedCampaigns);
+      } catch (error) {
+        console.warn('Could not refresh after withdrawal:', error);
+      }
+    }, 3000);
+    
+    return result;
+  } catch (error) {
+    console.error('❌ Failed to withdraw funds:', error);
+    throw error;
+  }
+}, [withdrawFunds, isConnected, isCorrectNetwork, loadCampaignsFromChain]);
+
   // Delete campaign (only local campaigns)
   const deleteCampaign = useCallback((campaignId) => {
     const campaignToDelete = campaigns.find(c => c.id === campaignId);
@@ -404,6 +438,7 @@ ipfsResult = await uploadCampaignData(metadataToUpload);
     createCampaign,
     deleteCampaign,
     addDonation,
+    withdrawCampaignFunds,
     loadCampaignFromIPFS, // For admin panel
     clearAllCampaigns,
     refreshFromBlockchain, // Instead of refreshFromRegistry
