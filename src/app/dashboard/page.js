@@ -1,5 +1,6 @@
 'use client';
 
+import { ENSName, useENSName } from '../hooks/useENS';
 import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, 
@@ -13,6 +14,7 @@ import {
   Heart,
   Trophy,
   Clock,
+  Wallet,
   AlertCircle,
   Trash2,
   Ban
@@ -401,10 +403,10 @@ export default function CreatorDashboard() {
               <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
                 <Settings className="w-5 h-5" />
               </button>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {/* TODO: Replace with ENS name */}
-                {address?.slice(0, 6)}...{address?.slice(-4)}
-              </div>
+              <div className="flex items-center gap-2 bg-gray-800 dark:bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+  <Wallet className="w-5 h-5" />
+  <ENSName address={address} fallbackLength={6} className="text-white" />
+</div>
             </div>
           </div>
         </div>
@@ -415,9 +417,8 @@ export default function CreatorDashboard() {
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            {/* TODO: Replace with ENS name */}
-            Welcome back! 👋
-          </h2>
+    Welcome back, <ENSName address={address} fallbackLength={4} />! 👋
+  </h2>
           <p className="text-gray-600 dark:text-gray-400">
             Manage your campaigns and track your contributions
           </p>

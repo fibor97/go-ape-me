@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { BarChart3, Trophy } from 'lucide-react';
 import CelebrationFireworks from '../components/CelebrationFireworks';
 import { getCampaignStatus, campaignFilters, filterCampaigns } from './hooks/useCampaignManager';
+import { ENSName } from './hooks/useENS';
 
 // Dark Mode Hook (permanent dark)
 const useDarkMode = () => {
@@ -581,7 +582,7 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
     className="h-8 w-8 sm:h-10 sm:w-10 object-contain"
   />
   <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-    APECrowd
+    Go-Ape-Me
   </h1>
 </div>
             
@@ -637,17 +638,17 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
               )}
               
               <button
-                onClick={isConnected ? () => setIsWalletModalOpen(true) : connect}
-                className="flex items-center gap-2 bg-gray-800 dark:bg-gray-700 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base whitespace-nowrap"
-              >
-                <Wallet className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                <span className="hidden sm:inline">
-                  {isConnected ? formattedAddress : 'Connect Wallet'}
-                </span>
-                <span className="sm:hidden">
-                  {isConnected ? mobileAddress : 'Connect'}
-                </span>
-              </button>
+  onClick={isConnected ? () => setIsWalletModalOpen(true) : connect}
+  className="flex items-center gap-2 bg-gray-800 dark:bg-gray-700 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base whitespace-nowrap"
+>
+  <Wallet className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+  <span className="hidden sm:inline">
+    {isConnected ? <ENSName address={address} fallbackLength={6} className="text-white" /> : 'Connect Wallet'}
+  </span>
+  <span className="sm:hidden">
+    {isConnected ? <ENSName address={address} fallbackLength={4} className="text-white" /> : 'Connect'}
+  </span>
+</button>
             </div>
           </div>
         </div>
@@ -913,7 +914,7 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
     className="h-16 w-16 object-contain"
   />
 </div>
-          <h3 className="text-2xl font-bold mb-4">APECrowd sponsored by Rida</h3>
+          <h3 className="text-2xl font-bold mb-4">Go-Ape-Me</h3>
           <p className="text-gray-400 mb-6">
             The decentralized crowdfunding platform on ApeChain
           </p>

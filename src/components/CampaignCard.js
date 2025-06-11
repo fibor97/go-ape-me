@@ -1,5 +1,6 @@
 // Updated CampaignCard Component
 
+import { ENSName } from '../app/hooks/useENS';
 import { getCampaignStatus } from '../app/hooks/useCampaignManager';
 import { Heart, Clock, Users, Trash2, ExternalLink, Copy, Wallet, Trophy } from 'lucide-react';
 import { useState } from 'react';
@@ -139,7 +140,7 @@ const CampaignCard = ({
         {/* Campaign Info */}
         <div className="mb-4 text-sm text-gray-500 dark:text-gray-400">
           <div className="flex justify-between">
-            <span>Creator: {formatCreator(campaign.creator)}</span>
+            <span>Creator: <ENSName address={campaign.creator} /></span>
             <span>Created: {formatDate(campaign.createdAt)}</span>
           </div>
         </div>
