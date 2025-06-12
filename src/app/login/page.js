@@ -42,7 +42,7 @@ export default function LoginPage() {
             />
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            Go-Ape-Me
+            GoApeMe
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Private Testing Access

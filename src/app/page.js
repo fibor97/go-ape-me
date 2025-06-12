@@ -582,7 +582,7 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
     className="h-8 w-8 sm:h-10 sm:w-10 object-contain"
   />
   <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-    Go-Ape-Me
+    GoApeMe
   </h1>
 </div>
             
@@ -914,7 +914,7 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
     className="h-16 w-16 object-contain"
   />
 </div>
-          <h3 className="text-2xl font-bold mb-4">Go-Ape-Me</h3>
+          <h3 className="text-2xl font-bold mb-4">GoApeMe</h3>
           <p className="text-gray-400 mb-6">
             The decentralized crowdfunding platform on ApeChain
           </p>
