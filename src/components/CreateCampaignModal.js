@@ -157,15 +157,14 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
               Goal (APE) *
             </label>
             <input
-              type="number"
-              value={formData.target}
-              onChange={(e) => setFormData({...formData, target: e.target.value})}
-              disabled={isSubmitting}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
-              placeholder="100"
-              min="0"
-              step="0.1"
-            />
+  type="number"
+  value={formData.target}
+  onChange={(e) => setFormData({...formData, target: e.target.value})}
+  placeholder="100"
+  min="1"     // ✅ Minimum 1 APE
+  step="1"    // ✅ Nur ganze Zahlen
+  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
+/>
           </div>
           
           <div>

@@ -432,10 +432,10 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
 {isConnected && (
   <button
     onClick={() => router.push('/dashboard')}
-    className="flex bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors items-center gap-2"
+    className="flex bg-gray-600 hover:bg-gray-700 text-white px-2 sm:px-4 py-2 rounded-lg font-medium transition-colors items-center gap-1 sm:gap-2"
   >
-    <BarChart3 className="w-5 h-5" />
-    Dashboard
+    <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
+    <span className="hidden sm:inline">Dashboard</span>
   </button>
 )}
               
