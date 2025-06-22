@@ -140,7 +140,7 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate, isConnected, isCorre
         {!isConnected && (
           <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
             <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              ⚠️ Please connect your wallet to donate with real APE tokens
+              ⚠️ Please connect your wallet to donate
             </p>
           </div>
         )}
@@ -156,7 +156,7 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate, isConnected, isCorre
         {isConnected && isCorrectNetwork && (
           <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
             <p className="text-sm text-green-800 dark:text-green-200">
-              ✅ Ready to donate with real APE tokens on ApeChain!
+              ✅ Ready to APE!
             </p>
           </div>
         )}
@@ -281,185 +281,6 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate, isConnected, isCorre
           border: none;
         }
       `}</style>
-    </div>
-  );
-};
-
-// Enhanced AdminPanel component für page.js
-
-const AdminPanel = ({ onClearAll, onImportIPFS, onRefreshRegistry, statistics }) => {
-  const [showPanel, setShowPanel] = useState(false);
-  const [importCid, setImportCid] = useState('');
-  const [registryCid, setRegistryCid] = useState('');
-  const [isImporting, setIsImporting] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isAddingToRegistry, setIsAddingToRegistry] = useState(false);
-
-  const handleImport = async () => {
-    if (!importCid.trim()) return;
-    
-    setIsImporting(true);
-    try {
-      await onImportIPFS(importCid.trim());
-      setImportCid('');
-      alert('Campaign imported successfully!');
-    } catch (error) {
-      alert('Failed to import campaign: ' + error.message);
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
-  const handleRefreshRegistry = async () => {
-    setIsRefreshing(true);
-    try {
-      const result = await onRefreshRegistry();
-      alert(`Registry refreshed! Found ${result.total} campaigns.`);
-    } catch (error) {
-      alert('Failed to refresh registry: ' + error.message);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  const handleAddToRegistry = async () => {
-    if (!registryCid.trim()) return;
-    
-    setIsAddingToRegistry(true);
-    try {
-      // Import campaign first, then add to registry
-      await onImportIPFS(registryCid.trim());
-      setRegistryCid('');
-      alert('Campaign added to registry successfully!');
-    } catch (error) {
-      alert('Failed to add to registry: ' + error.message);
-    } finally {
-      setIsAddingToRegistry(false);
-    }
-  };
-
-  if (!showPanel) {
-    return (
-      <button
-        onClick={() => setShowPanel(true)}
-        className="fixed bottom-4 right-4 bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-full shadow-lg transition-colors"
-        title="Admin Panel"
-      >
-        ⚙️
-      </button>
-    );
-  }
-
-  return (
-    <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 min-w-[350px] max-h-[80vh] overflow-y-auto">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100">Admin Panel</h3>
-        <button 
-          onClick={() => setShowPanel(false)}
-          className="text-gray-400 hover:text-gray-600"
-        >
-          ✕
-        </button>
-      </div>
-
-      {/* Statistics */}
-      <div className="mb-4 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-3 rounded">
-        <div className="font-semibold mb-1">📊 Statistics</div>
-        <div>Total Campaigns: {statistics.totalCampaigns}</div>
-        <div>Local Campaigns: {statistics.localCampaigns || 0}</div>
-        <div>Registry Campaigns: {statistics.registryCampaigns || 0}</div>
-        <div>IPFS Campaigns: {statistics.totalIPFSCampaigns}</div>
-        <div>Total Raised: {statistics.totalRaised.toFixed(1)} APE</div>
-      </div>
-
-      {/* Registry Management */}
-      <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 p-3 rounded">
-        <label className="block text-sm font-medium mb-2 text-blue-800 dark:text-blue-200">
-          🌐 Registry Management
-        </label>
-        
-        {/* Refresh Registry */}
-        <button
-          onClick={handleRefreshRegistry}
-          disabled={isRefreshing}
-          className="w-full mb-2 px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          <Upload className="w-4 h-4" />
-          {isRefreshing ? 'Refreshing...' : 'Refresh from Registry'}
-        </button>
-
-        {/* Add to Registry */}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={registryCid}
-            onChange={(e) => setRegistryCid(e.target.value)}
-            placeholder="CID to add to registry..."
-            className="flex-1 p-2 text-sm border border-blue-300 dark:border-blue-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-          />
-          <button
-            onClick={handleAddToRegistry}
-            disabled={!registryCid.trim() || isAddingToRegistry}
-            className="px-3 py-2 bg-green-500 text-white rounded text-sm hover:bg-green-600 disabled:opacity-50 flex items-center gap-1"
-          >
-            <Plus className="w-4 h-4" />
-            {isAddingToRegistry ? 'Adding...' : 'Add'}
-          </button>
-        </div>
-      </div>
-
-      {/* Import from IPFS */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2 text-gray-800 dark:text-gray-200">
-          📥 Import Campaign from IPFS
-        </label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={importCid}
-            onChange={(e) => setImportCid(e.target.value)}
-            placeholder="IPFS CID..."
-            className="flex-1 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-          />
-          <button
-            onClick={handleImport}
-            disabled={!importCid.trim() || isImporting}
-            className="px-3 py-2 bg-purple-500 text-white rounded text-sm hover:bg-purple-600 disabled:opacity-50 flex items-center gap-1"
-          >
-            <Download className="w-4 h-4" />
-            {isImporting ? 'Importing...' : 'Import'}
-          </button>
-        </div>
-      </div>
-
-      {/* Known CIDs */}
-      <div className="mb-4 bg-green-50 dark:bg-green-900/20 p-3 rounded">
-        <div className="font-semibold text-sm text-green-800 dark:text-green-200 mb-2">
-          🗂️ Known Campaign CIDs
-        </div>
-        <div className="text-xs text-green-700 dark:text-green-300 space-y-1">
-          <div className="font-mono bg-white dark:bg-gray-800 p-1 rounded">
-            QmdeW3reDJKoHqLXpcMgBjPGn6gQ2s8iSkBxFKEEfRvZPH
-          </div>
-          <div className="text-xs text-gray-500">
-            Copy this CID to test the import/registry functions
-          </div>
-        </div>
-      </div>
-
-      {/* Clear All */}
-      <button
-        onClick={() => {
-          if (confirm('Are you sure you want to delete all LOCAL campaigns? Registry campaigns will remain.')) {
-            onClearAll();
-            setShowPanel(false);
-          }
-        }}
-        className="w-full px-3 py-2 bg-red-500 text-white rounded text-sm hover:bg-red-600 flex items-center justify-center gap-2"
-      >
-        <Trash2 className="w-4 h-4" />
-        Clear Local Campaigns
-      </button>
     </div>
   );
 };
@@ -654,37 +475,81 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="py-20 px-4">
+      {/* Compact Hero Section */}
+      <section className="py-12 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-5xl font-bold text-gray-800 dark:text-gray-100 mb-6">
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-4">
             Crowdfunding on <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">ApeChain</span>
           </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
+          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-6 max-w-2xl mx-auto">
             Decentralized, transparent and secure. Support innovative projects or start your own campaign.
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg transition-colors duration-300">
-              <div className="text-3xl mb-4">💰</div>
-              <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-                {(statistics.totalRaised || 0).toFixed(1)} APE
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">Total Raised</p>
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            {isConnected ? (
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-8 py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Create Campaign
+              </button>
+            ) : (
+              <button
+                onClick={connect}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-8 py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center gap-2"
+              >
+                <Wallet className="w-5 h-5" />
+                Connect Wallet
+              </button>
+            )}
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2"
+            >
+              <BarChart3 className="w-5 h-5" />
+              View Dashboard
+            </button>
+          </div>
+        </div>
+      </section>
+      
+      {/* Platform Stats - Above Active Campaigns */}
+      <section className="py-8 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl">
+              <div className="text-center">
+                <div className="text-3xl mb-2">💰</div>
+                <h3 className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">
+                  {(statistics.totalRaised || 0).toFixed(1)} APE
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">Total Raised</p>
+                
+              </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg transition-colors duration-300">
-              <div className="text-3xl mb-4">👥</div>
-              <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-                {statistics.totalBackers}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">Supporter</p>
+            
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl">
+              <div className="text-center">
+                <div className="text-3xl mb-2">👥</div>
+                <h3 className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">
+                  {statistics.totalBackers || 0}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">Total Supporters</p>
+
+              </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg transition-colors duration-300">
-              <div className="text-3xl mb-4">🚀</div>
-              <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-                {statistics.totalCampaigns}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">Active Campaigns</p>
+            
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl">
+              <div className="text-center">
+                <div className="text-3xl mb-2">🚀</div>
+                <h3 className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">
+                  {statistics.totalCampaigns || 0}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">Total Campaigns</p>
+                
+              </div>
             </div>
           </div>
         </div>
@@ -955,13 +820,7 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
         isCorrectNetwork={isCorrectNetwork}
       />
 
-      {/* Admin Panel */}
-      <AdminPanel 
-  onClearAll={handleClearAll}
-  onImportIPFS={handleImportFromIPFS}
-  onRefreshRegistry={handleRefreshRegistry}
-  statistics={statistics}
-/>
+
 {/* Celebration Fireworks - ganz am Ende hinzufügen */}
 <CelebrationFireworks
   isVisible={showCelebration}

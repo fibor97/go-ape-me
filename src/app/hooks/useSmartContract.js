@@ -354,7 +354,8 @@ const withdrawFunds = useCallback(async (campaignId) => {
             target: parseFloat(ethers.formatEther(campaign.goal)),
             raised: parseFloat(ethers.formatEther(campaign.raised)),
             deadline: new Date(Number(campaign.deadline) * 1000).toISOString(),
-            status: CampaignStatus[campaign.status],
+            status: CampaignStatus[Number(campaign.status)],
+            blockchainStatusRaw: campaign.status, // Für Debug
             createdAt: new Date(Number(campaign.createdAt) * 1000).toISOString(),
             donorCount: campaign.donorCount.toString(),
             backers: parseInt(campaign.donorCount.toString()),

@@ -463,33 +463,21 @@ const getRandomImage = () => {
 
 // Campaign Status Helper
 export const getCampaignStatus = (campaign) => {
-  const progress = campaign.target > 0 ? (campaign.raised / campaign.target) * 100 : 0;
-  const now = new Date();
-  const deadline = campaign.deadline ? new Date(campaign.deadline) : null;
-  const isExpired = deadline && deadline < now;
-  
-  if (progress >= 100) {
-    return {
-      status: 'completed',
-      label: 'Funded',
-      color: 'green',
-      completedAt: campaign.completedAt || now.toISOString()
-    };
+  // Blockchain Status hat Priorität
+  if (campaign.blockchainStatusRaw === 1 || campaign.status === 'Successful') {
+    return { status: 'completed', label: '🎉 Funded', color: 'green' };
   }
   
-  if (isExpired) {
-    return {
-      status: 'expired',
-      label: 'Expired',
-      color: 'red'
-    };
+  if (campaign.blockchainStatusRaw === 2 || campaign.status === 'Failed') {
+    return { status: 'expired', label: 'Failed', color: 'red' };
   }
   
-  return {
-    status: 'active',
-    label: 'Active',
-    color: 'blue'
-  };
+  if (campaign.blockchainStatusRaw === 3 || campaign.status === 'Withdrawn') {
+    return { status: 'withdrawn', label: 'Withdrawn', color: 'gray' };
+  }
+  
+  // Fallback zu Active
+  return { status: 'active', label: 'Active', color: 'blue' };
 };
 
 // Filter Options
@@ -514,10 +502,13 @@ export const filterCampaigns = (campaigns, filter) => {
       });
       
     case 'completed':
-      return campaigns.filter(campaign => {
-        const status = getCampaignStatus(campaign);
-        return status.status === 'completed';
-      });
+  return campaigns.filter(campaign => {
+    const status = getCampaignStatus(campaign);
+    // ✅ Alle beendeten Campaigns (nicht nur erfolgreiche)
+    return status.status === 'completed' || 
+           status.status === 'expired' || 
+           status.status === 'withdrawn';
+  });
       
     case 'last30':
       const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
