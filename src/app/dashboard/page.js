@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation';
 import { useWalletConnection } from '../hooks/useWalletConnection';
 import { useCampaignManager } from '../hooks/useCampaignManager';
 import { getCampaignStatus } from '../hooks/useCampaignManager';
+import WalletModal from '../../components/WalletModal';
 
 // Stats Card Component
 const StatsCard = ({ title, value, icon: Icon, trend, color = "purple", subtitle }) => {
@@ -272,7 +273,8 @@ const DonationRow = ({ campaign, donationAmount, onRefund, onReDonate }) => {
 
 export default function CreatorDashboard() {
   const router = useRouter();
-  const { isConnected, address, connect } = useWalletConnection();
+  const { isConnected, address, connect, disconnect, formattedAddress, chainName, isCorrectNetwork } = useWalletConnection();
+const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const { campaigns, statistics , withdrawCampaignFunds } = useCampaignManager();
   
   // Filter campaigns and donations by current user
@@ -415,10 +417,13 @@ Transaction: ${result.txHash}`);
               <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
                 <Settings className="w-5 h-5" />
               </button>
-              <div className="flex items-center gap-2 bg-gray-800 dark:bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+              <button
+  onClick={() => setIsWalletModalOpen(true)}
+  className="flex items-center gap-2 bg-gray-800 dark:bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+>
   <Wallet className="w-5 h-5" />
   <ENSName address={address} fallbackLength={6} className="text-white" />
-</div>
+</button>
             </div>
           </div>
         </div>
@@ -575,6 +580,16 @@ Transaction: ${result.txHash}`);
           )}
         </div>
       </main>
+      {/* Wallet Modal - FEHLT IM DASHBOARD */}
+      <WalletModal
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
+        onDisconnect={disconnect}
+        address={address}
+        formattedAddress={formattedAddress}
+        chainName={chainName}
+        isCorrectNetwork={isCorrectNetwork}
+      />
     </div>
   );
 }
