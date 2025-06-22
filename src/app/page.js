@@ -407,7 +407,7 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
   </h1>
 </div>
             
-            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            <div className="flex items-center gap-1 sm:gap-4 flex-shrink-0 overflow-hidden">
               {/* Network Warning */}
               {isConnected && !isCorrectNetwork && (
                 <div className="flex items-center gap-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded text-xs">
@@ -460,7 +460,7 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
               
               <button
   onClick={isConnected ? () => setIsWalletModalOpen(true) : connect}
-  className="flex items-center gap-2 bg-gray-800 dark:bg-gray-700 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base whitespace-nowrap"
+  className="flex items-center gap-1 sm:gap-2 bg-gray-800 dark:bg-gray-700 text-white px-2 sm:px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-xs sm:text-base whitespace-nowrap min-w-0 max-w-[120px] sm:max-w-none overflow-hidden"
 >
   <Wallet className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
   <span className="hidden sm:inline">
@@ -730,24 +730,24 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
 </section>
       
      {/* Minimal Footer */}
-      <footer className="bg-gray-900 border-t border-gray-800 py-2 px-4">
+      <footer className="bg-gray-900 border-t border-gray-800 py-3 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-gray-400">
+          <div className="flex flex-col space-y-2 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 text-sm text-gray-400">
             {/* Left Side - Creator */}
-            <div className="flex items-center gap-2 mb-2 sm:mb-0">
+            <div className="flex items-center justify-center sm:justify-start gap-2">
               <span>Made by</span>
               <a 
                 href="https://x.com/fibordoteth" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-white hover:text-blue-300 font-medium transition-colors"
+                className="text-white hover:text-gray-300 font-medium transition-colors"
               >
                 Fibor
               </a>
             </div>
             
             {/* Right Side - Powered by ApeChain */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center sm:justify-end gap-2">
               <span>Powered by</span>
               <a 
                 href="https://apechain.com" 
@@ -755,7 +755,7 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
                 rel="noopener noreferrer"
                 className="hover:opacity-80 transition-opacity"
               >
-                {/* ApeChain Logo - größer und direkt verlinkbar */}
+                {/* ApeChain Logo - kleiner */}
                 <img 
                   src="/apechain_logo.png" 
                   alt="ApeChain" 

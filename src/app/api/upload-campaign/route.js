@@ -33,8 +33,6 @@ const metadata = {
   category: campaignData.category || 'Technology',
   target: parseFloat(campaignData.target),
   creator: campaignData.creator,
-  
-  // ✅ FIX: Image hinzufügen
   image: campaignData.image || null,
   hasCustomImage: campaignData.hasCustomImage || false,
   
