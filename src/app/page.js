@@ -476,81 +476,41 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
       </header>
 
       {/* Compact Hero Section */}
-      <section className="py-12 px-4">
+      <section className="py-8 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-100 mb-3">
             Crowdfunding on <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">ApeChain</span>
           </h2>
-          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-6 max-w-2xl mx-auto">
+          <p className="text-base md:text-lg text-gray-600 dark:text-gray-300 mb-4 max-w-2xl mx-auto">
             Decentralized, transparent and secure. Support innovative projects or start your own campaign.
           </p>
           
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          {/* CTA Buttons - kompakter */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
             {isConnected ? (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-8 py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center gap-2"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center gap-2"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4" />
                 Create Campaign
               </button>
             ) : (
               <button
                 onClick={connect}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-8 py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center gap-2"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center gap-2"
               >
-                <Wallet className="w-5 h-5" />
+                <Wallet className="w-4 h-4" />
                 Connect Wallet
               </button>
             )}
             <button
               onClick={() => router.push('/dashboard')}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2"
+              className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors flex items-center gap-2"
             >
-              <BarChart3 className="w-5 h-5" />
+              <BarChart3 className="w-4 h-4" />
               View Dashboard
             </button>
-          </div>
-        </div>
-      </section>
-      
-      {/* Platform Stats - Above Active Campaigns */}
-      <section className="py-8 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl">
-              <div className="text-center">
-                <div className="text-3xl mb-2">💰</div>
-                <h3 className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-                  {(statistics.totalRaised || 0).toFixed(1)} APE
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">Total Raised</p>
-                
-              </div>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl">
-              <div className="text-center">
-                <div className="text-3xl mb-2">👥</div>
-                <h3 className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-                  {statistics.totalBackers || 0}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">Total Supporters</p>
-
-              </div>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl">
-              <div className="text-center">
-                <div className="text-3xl mb-2">🚀</div>
-                <h3 className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-                  {statistics.totalCampaigns || 0}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">Total Campaigns</p>
-                
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -562,9 +522,9 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
     {/* ACTIVE CAMPAIGNS SECTION */}
     <div className="mb-16">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4 md:mb-0">
-          🚀 Active Campaigns
-        </h2>
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-3 md:mb-0">
+  🚀 Active Campaigns
+</h2>
         
         {/* Category Filter für Active */}
         <div className="flex flex-wrap gap-2">
@@ -594,7 +554,7 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
         return (
           <>
             {/* Active Stats */}
-            <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+            <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <div>
                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -674,9 +634,9 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
     {/* COMPLETED CAMPAIGNS SECTION */}
     <div>
       <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4 md:mb-0">
-          🏆 Completed Campaigns
-        </h2>
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-3 md:mb-0">
+  🏆 Completed Campaigns
+</h2>
         
         {/* Time Filter für Completed */}
         <div className="flex flex-wrap gap-2">
@@ -703,7 +663,7 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
         return (
           <>
             {/* Completed Stats */}
-            <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+            <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <div>
                   <div className="text-2xl font-bold text-green-600 dark:text-green-400">
@@ -769,22 +729,40 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
   </div>
 </section>
       
-      {/* Footer */}
-      <footer className="bg-gray-800 dark:bg-gray-900 text-white py-12 px-4 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="flex justify-center mb-4">
-  <img 
-    src="/apecrowd_logo_transparent.png" 
-    alt="APECrowd Logo" 
-    className="h-16 w-16 object-contain"
-  />
-</div>
-          <h3 className="text-2xl font-bold mb-4">GoApeMe</h3>
-          <p className="text-gray-400 mb-6">
-            The decentralized crowdfunding platform on ApeChain
-          </p>
-          <div className="flex justify-center gap-6">
-            <span className="text-sm text-gray-500">Built with ❤️ on ApeChain</span>
+     {/* Minimal Footer */}
+      <footer className="bg-gray-900 border-t border-gray-800 py-2 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-gray-400">
+            {/* Left Side - Creator */}
+            <div className="flex items-center gap-2 mb-2 sm:mb-0">
+              <span>Made by</span>
+              <a 
+                href="https://x.com/fibordoteth" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-white hover:text-blue-300 font-medium transition-colors"
+              >
+                Fibor
+              </a>
+            </div>
+            
+            {/* Right Side - Powered by ApeChain */}
+            <div className="flex items-center gap-2">
+              <span>Powered by</span>
+              <a 
+                href="https://apechain.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="hover:opacity-80 transition-opacity"
+              >
+                {/* ApeChain Logo - größer und direkt verlinkbar */}
+                <img 
+                  src="/apechain_logo.png" 
+                  alt="ApeChain" 
+                  className="h-6 w-auto object-contain hover:scale-105 transition-transform"
+                />
+              </a>
+            </div>
           </div>
         </div>
       </footer>

@@ -27,19 +27,24 @@ export async function POST(request) {
     console.log('🔑 Pinata JWT found:', pinataJWT.substring(0, 20) + '...');
 
     // Create metadata
-    const metadata = {
-      title: campaignData.title,
-      description: campaignData.description,
-      category: campaignData.category || 'Technology',
-      target: parseFloat(campaignData.target),
-      creator: campaignData.creator,
-      timestamp: Date.now(),
-      version: '1.0',
-      platform: 'go-ape-me',
-      createdAt: new Date().toISOString(),
-      status: 'active',
-      type: 'crowdfunding-campaign'
-    };
+const metadata = {
+  title: campaignData.title,
+  description: campaignData.description,
+  category: campaignData.category || 'Technology',
+  target: parseFloat(campaignData.target),
+  creator: campaignData.creator,
+  
+  // ✅ FIX: Image hinzufügen
+  image: campaignData.image || null,
+  hasCustomImage: campaignData.hasCustomImage || false,
+  
+  timestamp: Date.now(),
+  version: '1.0',
+  platform: 'go-ape-me',
+  createdAt: new Date().toISOString(),
+  status: 'active',
+  type: 'crowdfunding-campaign'
+};
 
     const metadataJson = JSON.stringify(metadata, null, 2);
 
