@@ -79,20 +79,7 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate, isConnected, isCorre
     setIsProcessing(true);
     try {
       // Process donation
-await addDonation(campaignId, amount);
-
-// Show celebration if campaign just got completed
-if (willComplete) {
-  setCelebrationCampaign(campaign);
-  setShowCelebration(true);
-}
-
-// Nur Alert anzeigen wenn echte Blockchain-Transaktion
-if (isConnected && isCorrectNetwork) {
-  alert(`Successfully donated ${amount} APE! 🎉`);
-} else {
-  console.log('✅ Mock donation completed:', amount, 'APE');
-}
+await onDonate(campaign.id, donationAmount);
 
 console.log('✅ Donation completed successfully');
     } catch (error) {

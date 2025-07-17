@@ -190,7 +190,7 @@ export const useSmartContract = () => {
       if (!contract) throw new Error('Could not get contract instance');
 
 
-const goalInWei = ethers.parseEther(parseFloat(campaignData.target).toString());
+const amountInWei = ethers.parseEther(parseFloat(amountInAPE).toString());
 
       console.log('💰 Donating to campaign:', campaignId, 'Amount:', amountInAPE, 'APE');
 

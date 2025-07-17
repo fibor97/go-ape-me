@@ -20,37 +20,35 @@ export const useCampaignManager = () => {
   } = useSmartContract();
 
   // Load campaigns on startup: ONLY Blockchain campaigns
-  useEffect(() => {
-    const loadCampaigns = async () => {
-      try {
-        console.log('🚀 Loading campaigns from ApeChain...');
-        setIsLoading(true);
-        
-        // ONLY load from blockchain - no local fallback
-        if (isClient) {
-          try {
-            const blockchainCampaigns = await loadCampaignsFromChain();
-            console.log(`⛓️ Loaded ${blockchainCampaigns.length} campaigns from ApeChain`);
-            setCampaigns(blockchainCampaigns);
-          } catch (error) {
-            console.error('❌ Could not load from blockchain:', error);
-            setCampaigns([]); // Empty if blockchain fails
-          }
-        } else {
-          console.log('⏳ Waiting for blockchain dependencies...');
+ useEffect(() => {
+  const loadCampaigns = async () => {
+    try {
+      console.log('🚀 Loading campaigns from ApeChain...');
+      setIsLoading(true);
+      
+      if (isClient) {
+        try {
+          const blockchainCampaigns = await loadCampaignsFromChain();
+          console.log(`⛓️ Loaded ${blockchainCampaigns.length} campaigns from ApeChain`);
+          setCampaigns(blockchainCampaigns);
+        } catch (error) {
+          console.error('❌ Could not load from blockchain:', error);
           setCampaigns([]);
         }
-        
-      } catch (error) {
-        console.error('❌ Failed to load campaigns:', error);
+      } else {
+        console.log('⏳ Waiting for blockchain dependencies...');
         setCampaigns([]);
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (error) {
+      console.error('❌ Failed to load campaigns:', error);
+      setCampaigns([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    loadCampaigns();
-  }, [loadCampaignsFromChain, isClient]);
+  loadCampaigns();
+}, [loadCampaignsFromChain, isClient]); 
 
   // Load local campaigns from localStorage
   const loadLocalCampaigns = () => {
