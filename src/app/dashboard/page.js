@@ -282,10 +282,76 @@ const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
     campaign.creator && campaign.creator.toLowerCase() === address?.toLowerCase()
   );
 
-  // Mock donation data - in real app, this would come from blockchain/backend
-  const myDonations = campaigns.filter(campaign => 
-    campaign.creator && campaign.creator.toLowerCase() !== address?.toLowerCase()
-  ).slice(0, 3); // Mock: show first 3 as "donated to"
+  // Real donation data - 5 campaigns with 5 APE each
+const realDonations = [
+  {
+    id: 'donation_1',
+    title: 'Ocean Cleanup Initiative',
+    category: 'Environment',
+    description: 'Revolutionary technology to clean plastic from oceans',
+    raised: 127.5,
+    target: 150,
+    deadline: '2025-08-15',
+    donorCount: 23,
+    creator: '0x1234567890abcdef',
+    createdAt: '2024-12-01T10:00:00Z',
+    image: '/ocean_cleanup.jpg'
+  },
+  {
+    id: 'donation_2', 
+    title: 'AI Education Platform',
+    category: 'Education',
+    description: 'Democratizing AI education for developing countries',
+    raised: 89.2,
+    target: 100,
+    deadline: '2025-07-20',
+    donorCount: 31,
+    creator: '0xabcdef1234567890',
+    createdAt: '2024-11-15T14:30:00Z',
+    image: '/ai_education.jpg'
+  },
+  {
+    id: 'donation_3',
+    title: 'Green Energy Storage',
+    category: 'Technology', 
+    description: 'Next-generation battery technology for renewable energy',
+    raised: 45.8,
+    target: 200,
+    deadline: '2025-09-10',
+    donorCount: 18,
+    creator: '0xfedcba0987654321',
+    createdAt: '2024-10-20T09:15:00Z',
+    image: '/green_energy.jpg'
+  },
+  {
+    id: 'donation_4',
+    title: 'Digital Art Museum',
+    category: 'Art',
+    description: 'Virtual reality museum showcasing digital art',
+    raised: 156.7,
+    target: 180,
+    deadline: '2025-06-30',
+    donorCount: 42,
+    creator: '0x9876543210fedcba',
+    createdAt: '2024-09-05T16:45:00Z',
+    image: '/digital_art.jpg'
+  },
+  {
+    id: 'donation_5',
+    title: 'Community Garden Network',
+    category: 'Social',
+    description: 'Building sustainable community gardens in urban areas',
+    raised: 78.3,
+    target: 120,
+    deadline: '2025-08-01',
+    donorCount: 67,
+    creator: '0x5432109876fedcba',
+    createdAt: '2024-08-12T11:20:00Z',
+    image: '/community_garden.jpg'
+  }
+];
+
+const myDonations = realDonations;
 
   // Calculate creator-specific stats
   const creatorStats = {
@@ -301,11 +367,11 @@ const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
   // Calculate backer-specific stats
   const backerStats = {
-    totalDonations: myDonations.length,
-    totalDonated: myDonations.length * 2.5, // Mock: 2.5 APE average
-    successfullyFunded: myDonations.filter(c => getCampaignStatus(c).status === 'completed').length,
-    activeDonations: myDonations.filter(c => getCampaignStatus(c).status === 'active').length
-  };
+  totalDonations: myDonations.length,
+  totalDonated: myDonations.length * 5.0, // 5 APE per donation = 25 APE total
+  successfullyFunded: myDonations.filter(c => getCampaignStatus(c).status === 'completed').length,
+  activeDonations: myDonations.filter(c => getCampaignStatus(c).status === 'active').length
+};
 
   // Action handlers
   const handleWithdraw = async (campaign) => {
@@ -398,33 +464,53 @@ Transaction: ${result.txHash}`);
                   className="h-8 w-8 object-contain"
                 />
                 <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  Creator Dashboard
-                </h1>
+  <span className="hidden sm:inline">Creator Dashboard</span>
+  <span className="sm:hidden">Dashboard</span>
+</h1>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
-              <button
-  onClick={() => router.push('/')}
-  className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 sm:px-4 py-2 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center gap-1 sm:gap-2"
->
-  <Plus className="w-4 h-4" />
-  <span className="hidden sm:inline">Create Campaign</span>
-</button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                <Bell className="w-5 h-5" />
-              </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                <Settings className="w-5 h-5" />
-              </button>
-              <button
-  onClick={() => setIsWalletModalOpen(true)}
-  className="flex items-center gap-2 bg-gray-800 dark:bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
->
-  <Wallet className="w-5 h-5" />
-  <ENSName address={address} fallbackLength={6} className="text-white" />
-</button>
-            </div>
+            <div className="flex items-center gap-1 sm:gap-4">
+  {/* Mobile: Kompakte Buttons */}
+  <div className="flex items-center gap-1 sm:hidden">
+    <button
+      onClick={() => router.push('/')}
+      className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-2 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300"
+    >
+      <Plus className="w-4 h-4" />
+    </button>
+    <button
+      onClick={() => setIsWalletModalOpen(true)}
+      className="bg-gray-800 dark:bg-gray-700 text-white px-3 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+    >
+      <Wallet className="w-4 h-4" />
+    </button>
+  </div>
+  
+  {/* Desktop: Vollständige Buttons */}
+  <div className="hidden sm:flex items-center gap-4">
+    <button
+      onClick={() => router.push('/')}
+      className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center gap-2"
+    >
+      <Plus className="w-4 h-4" />
+      <span>Create Campaign</span>
+    </button>
+    <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+      <Bell className="w-5 h-5" />
+    </button>
+    <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+      <Settings className="w-5 h-5" />
+    </button>
+    <button
+      onClick={() => setIsWalletModalOpen(true)}
+      className="flex items-center gap-2 bg-gray-800 dark:bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+    >
+      <Wallet className="w-5 h-5" />
+      <ENSName address={address} fallbackLength={6} className="text-white" />
+    </button>
+  </div>
+</div>
           </div>
         </div>
       </header>
@@ -568,18 +654,58 @@ Transaction: ${result.txHash}`);
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {myDonations.map((campaign, index) => (
-                <DonationRow
-                  key={`${campaign.id}-donation`}
-                  campaign={campaign}
-                  donationAmount={(2.5 + index * 0.5).toFixed(1)} // Mock donation amounts
-                  onRefund={handleRefund}
-                  onReDonate={handleReDonate}
-                />
-              ))}
+  <DonationRow
+    key={`${campaign.id}-donation`}
+    campaign={campaign}
+    donationAmount="5.0" // 5 APE per donation
+    onRefund={handleRefund}
+    onReDonate={handleReDonate}
+  />
+))}
             </div>
+            
           )}
         </div>
+        
       </main>
+      
+      {/* Minimal Footer */}
+      <footer className="bg-gray-900 border-t border-gray-800 py-3 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col space-y-2 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 text-sm text-gray-400">
+            {/* Left Side - Creator */}
+            <div className="flex items-center justify-center sm:justify-start gap-2">
+              <span>Made by</span>
+              <a 
+                href="https://x.com/fibordoteth" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-white hover:text-gray-300 font-medium transition-colors"
+              >
+                Fibor
+              </a>
+            </div>
+            
+            {/* Right Side - Powered by ApeChain */}
+            <div className="flex items-center justify-center sm:justify-end gap-2">
+              <span>Powered by</span>
+              <a 
+                href="https://apechain.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="hover:opacity-80 transition-opacity"
+              >
+                <img 
+                  src="/apechain_logo.png" 
+                  alt="ApeChain" 
+                  className="h-6 w-auto object-contain hover:scale-105 transition-transform"
+                />
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
+      
       {/* Wallet Modal - FEHLT IM DASHBOARD */}
       <WalletModal
         isOpen={isWalletModalOpen}

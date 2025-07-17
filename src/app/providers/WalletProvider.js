@@ -41,7 +41,7 @@ const initializeWagmi = () => {
         [mainnet.id]: http(),
         [arbitrum.id]: http(),
       },
-      ssr: false, // Wichtig für Vercel
+      ssr: false,
     });
   }
 
@@ -53,7 +53,7 @@ const initializeWagmi = () => {
           refetchOnWindowFocus: false,
           refetchOnMount: false,
           refetchOnReconnect: false,
-          staleTime: 1000 * 60 * 5, // 5 minutes
+          staleTime: 1000 * 60 * 5,
         },
       },
     });
@@ -63,19 +63,15 @@ const initializeWagmi = () => {
 export function WalletProvider({ children }) {
   const [mounted, setMounted] = useState(false);
 
-  // Client-side only mounting
+  // ✅ FIX: useEffect mit leeren Dependencies
   useEffect(() => {
+    initializeWagmi();
     setMounted(true);
-    initializeWagmi(); // Initialisiere Wagmi nur client-side
-  }, []);
+  }, []); // ✅ Leeres dependency array!
 
-  // SSR Fallback - Render nur children ohne Wallet Features
+  // ✅ FIX: Gleicher Content für SSR und CSR
   if (!mounted) {
-    return (
-      <div suppressHydrationWarning={true}>
-        {children}
-      </div>
-    );
+    return <div>{children}</div>;
   }
 
   // Client-side Wallet Provider

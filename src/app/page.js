@@ -12,16 +12,8 @@ import { BarChart3, Trophy } from 'lucide-react';
 import CelebrationFireworks from '../components/CelebrationFireworks';
 import { getCampaignStatus, campaignFilters, filterCampaigns } from './hooks/useCampaignManager';
 import { ENSName } from './hooks/useENS';
+import FloatingThemeSwitch from '../components/FloatingThemeSwitch';
 
-// Dark Mode Hook (permanent dark)
-const useDarkMode = () => {
-  useEffect(() => {
-    document.documentElement.classList.add('dark');
-  }, []);
-  return { isDark: true };
-};
-
-// Updated DonateModal in page.js
 
 // Enhanced DonateModal für page.js
 
@@ -86,9 +78,23 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate, isConnected, isCorre
 
     setIsProcessing(true);
     try {
-      await onDonate(campaign.id, donationAmount);
-      setAmount('');
-      alert(`Successfully donated ${donationAmount} APE! 🎉`);
+      // Process donation
+await addDonation(campaignId, amount);
+
+// Show celebration if campaign just got completed
+if (willComplete) {
+  setCelebrationCampaign(campaign);
+  setShowCelebration(true);
+}
+
+// Nur Alert anzeigen wenn echte Blockchain-Transaktion
+if (isConnected && isCorrectNetwork) {
+  alert(`Successfully donated ${amount} APE! 🎉`);
+} else {
+  console.log('✅ Mock donation completed:', amount, 'APE');
+}
+
+console.log('✅ Donation completed successfully');
     } catch (error) {
       console.error('Donation failed:', error);
       alert(`Donation failed: ${error.message}`);
@@ -100,7 +106,7 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate, isConnected, isCorre
   if (!isOpen || !campaign) return null;
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Support Campaign</h2>
         
@@ -799,7 +805,7 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
       />
 
 
-{/* Celebration Fireworks - ganz am Ende hinzufügen */}
+{/* Celebration Fireworks */}
 <CelebrationFireworks
   isVisible={showCelebration}
   campaignTitle={celebrationCampaign?.title}
@@ -808,6 +814,9 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
     setCelebrationCampaign(null);
   }}
 />
+
+      {/* Floating Theme Switch */}
+      <FloatingThemeSwitch />
     </div>
     
   );

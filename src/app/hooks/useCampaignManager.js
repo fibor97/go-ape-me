@@ -426,10 +426,19 @@ const withdrawCampaignFunds = useCallback(async (campaignId) => {
   }, [campaigns, getContractStats, isClient]);
 
   // Get current statistics
-  const [statistics, setStatistics] = useState({});
-  useEffect(() => {
-    getStatistics().then(setStatistics);
-  }, [campaigns, getStatistics]);
+const [statistics, setStatistics] = useState({});
+useEffect(() => {
+  const updateStats = async () => {
+    try {
+      const stats = await getStatistics();
+      setStatistics(stats);
+    } catch (error) {
+      console.error('Failed to update statistics:', error);
+    }
+  };
+  
+  updateStats();
+}, [campaigns.length]); // ✅ Nur campaigns.length als dependency
 
   return {
     campaigns,
@@ -474,6 +483,22 @@ export const getCampaignStatus = (campaign) => {
   
   if (campaign.blockchainStatusRaw === 3 || campaign.status === 'Withdrawn') {
     return { status: 'withdrawn', label: 'Withdrawn', color: 'gray' };
+  }
+  
+  // ✅ DEADLINE CHECK - auch wenn Blockchain Status noch Active ist
+  if (campaign.deadline) {
+    const now = new Date();
+    const deadline = new Date(campaign.deadline);
+    const isExpired = now > deadline;
+    const hasReachedGoal = campaign.raised >= campaign.target;
+    
+    if (isExpired && !hasReachedGoal) {
+      return { status: 'expired', label: 'Expired', color: 'red' };
+    }
+    
+    if (hasReachedGoal) {
+      return { status: 'completed', label: '🎉 Funded', color: 'green' };
+    }
   }
   
   // Fallback zu Active

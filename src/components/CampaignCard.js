@@ -104,6 +104,8 @@ const progressPercentage = status.status === 'withdrawn'
       ? 'bg-green-500 text-white'
       : status.status === 'expired'
       ? 'bg-red-500 text-white'
+      : status.status === 'withdrawn'
+      ? 'bg-green-600 text-white'
       : 'bg-blue-500 text-white'
   }`}>
     {status.label}
@@ -150,12 +152,16 @@ const progressPercentage = status.status === 'withdrawn'
         <div className="mb-4">   
           
           <div className="flex justify-between items-center mb-2">
-            <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-              {campaign.raised.toFixed(1)} APE
-            </span>
-            <span className="text-gray-500 dark:text-gray-400">
-              of {campaign.target} APE ({Math.min(progressPercentage, 100).toFixed(1)}%)
-            </span>
+           <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+  {status.status === 'completed' || status.status === 'withdrawn' 
+    ? campaign.target.toFixed(1) 
+    : campaign.raised.toFixed(1)} APE
+</span>
+<span className="text-gray-500 dark:text-gray-400">
+  of {campaign.target} APE ({status.status === 'completed' || status.status === 'withdrawn' 
+    ? '100.0' 
+    : Math.min(progressPercentage, 100).toFixed(1)}%)
+</span>
           </div>
           
           {/* ✅ Progress Bar - zeigt echten Progress auch über 100% */}
@@ -226,16 +232,16 @@ style={{ width: `${status.status === 'withdrawn' ? 100 : Math.min(progressPercen
             )}
             
             {status.status === 'withdrawn' && (
-              <div>
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <span>💰</span>
-                  <span>Funds Withdrawn</span>
-                </div>
-                <div className="text-sm opacity-75">
-                  Creator received {(campaign.raised * 0.95).toFixed(1)} APE
-                </div>
-              </div>
-            )}
+  <div className="border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
+    <div className="flex items-center justify-center gap-2 mb-1">
+      <span>💰</span>
+      <span className="text-green-800 dark:text-green-200 font-medium">Funds Withdrawn</span>
+    </div>
+    <div className="text-sm text-green-700 dark:text-green-300">
+      Creator received {(campaign.target * 0.95).toFixed(1)} APE (95%)
+    </div>
+  </div>
+)}
             
             {status.status === 'expired' && (
               <div>
