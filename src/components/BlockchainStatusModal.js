@@ -1,5 +1,3 @@
-// 🔧 BLOCKCHAIN STATUS MODAL - DEBUG VERSION
-
 import React, { useState, useEffect } from 'react';
 import { X, Loader, CheckCircle, Share2, Twitter, Facebook, Copy, Clock, Zap } from 'lucide-react';
 
@@ -11,7 +9,8 @@ const BlockchainStatusModal = ({
   amount = '0',
   campaignId = null,
   campaignData = null,
-  onTransactionComplete
+  onTransactionComplete,
+  smartContract = null
 }) => {
   const [status, setStatus] = useState('pending');
   const [transactionHash, setTransactionHash] = useState('');
@@ -20,93 +19,93 @@ const BlockchainStatusModal = ({
   const [error, setError] = useState(null);
   const [debugInfo, setDebugInfo] = useState('');
 
-  // ⚠️ TEMPORARY: Fallback zur Simulation bis echte Blockchain funktioniert
-  const USE_SIMULATION = true; // Setze auf false wenn Blockchain ready ist
-
+  // 🔗 ECHTE BLOCKCHAIN INTEGRATION
   useEffect(() => {
     if (isOpen && status === 'pending') {
-      setDebugInfo(`Starting ${transactionType} transaction...`);
-      
-      if (USE_SIMULATION) {
-        // 🔄 SIMULATION MODE - für Development
-        console.log('🧪 Using simulation mode for development');
-        const timer = setTimeout(() => {
-          setStatus('success');
-          const txHash = '0x' + Math.random().toString(16).substr(2, 40);
-          setTransactionHash(txHash);
-          setShowShare(true);
-          setDebugInfo('Simulation completed successfully');
-          
-          if (onTransactionComplete) {
-            onTransactionComplete({
-              txHash: txHash,
-              success: true,
-              simulation: true
-            });
-          }
-        }, 2000); // Kürzere Zeit für Testing
-        
-        return () => clearTimeout(timer);
-        
-      } else {
-        // 🔗 REAL BLOCKCHAIN MODE
-        processRealBlockchainTransaction();
-      }
+      processRealBlockchainTransaction();
     }
   }, [isOpen, status]);
 
   const processRealBlockchainTransaction = async () => {
-    try {
-      setDebugInfo('Checking wallet connection...');
-      
-      // Importiere useSmartContract dynamisch
-      const { useSmartContract } = await import('../app/hooks/useSmartContract');
+  try {
+    setDebugInfo('Checking wallet and blockchain connection...');
+    
+    // 🚀 NEU: Verwende Smart Contract von Props
+    if (!smartContract) {
+      throw new Error('Smart contract not provided. Please connect your wallet.');
+    }
+    
+    const smartContractHook = smartContract;
+
       const { 
         donateToChain, 
         createCampaignOnChain, 
         withdrawFunds,
         isConnected, 
-        isCorrectNetwork 
-      } = useSmartContract();
+        isCorrectNetwork,
+        isClient 
+      } = smartContractHook;
 
-      console.log('🔗 Blockchain Status:', {
+      console.log('🔍 Wallet Status:', {
         isConnected,
         isCorrectNetwork,
-        transactionType,
-        campaignId,
-        amount
+        isClient
       });
 
+      // Validate blockchain dependencies
+      if (!isClient) {
+        throw new Error('Blockchain dependencies not loaded. Please refresh the page.');
+      }
+
       if (!isConnected) {
-        throw new Error('Wallet not connected');
+        throw new Error('Wallet not connected. Please connect your wallet first.');
       }
       
       if (!isCorrectNetwork) {
-        throw new Error('Please switch to ApeChain');
+        throw new Error('Wrong network. Please switch to ApeChain.');
       }
 
-      setDebugInfo(`Processing ${transactionType} on blockchain...`);
+      setDebugInfo(`Processing ${transactionType} on ApeChain blockchain...`);
 
       let result;
       switch (transactionType) {
         case 'donation':
-          if (!campaignId || !amount) {
-            throw new Error('Campaign ID and amount required for donation');
+          if (!campaignId) {
+            throw new Error('Campaign ID is required for donation');
           }
+          if (!amount || parseFloat(amount) <= 0) {
+            throw new Error('Valid donation amount is required');
+          }
+          
+          console.log('💰 Processing donation:', { campaignId, amount });
           result = await donateToChain(campaignId, parseFloat(amount));
           break;
 
         case 'campaign':
           if (!campaignData) {
-            throw new Error('Campaign data required for creation');
+            throw new Error('Campaign data is required for creation');
           }
-          result = await createCampaignOnChain(campaignData);
+          if (!campaignData.title || !campaignData.description || !campaignData.target) {
+            throw new Error('Campaign title, description, and target are required');
+          }
+          
+          console.log('🚀 Creating campaign:', campaignData);
+          result = await createCampaignOnChain({
+            title: campaignData.title,
+            description: campaignData.description,
+            category: campaignData.category || 'Technology',
+            ipfsCid: campaignData.ipfsCid || '',
+            goalInAPE: campaignData.target,
+            durationInDays: campaignData.durationInDays || 30
+          });
           break;
 
         case 'withdrawal':
           if (!campaignId) {
-            throw new Error('Campaign ID required for withdrawal');
+            throw new Error('Campaign ID is required for withdrawal');
           }
+          
+          console.log('💸 Processing withdrawal:', { campaignId });
           result = await withdrawFunds(campaignId);
           break;
 
@@ -114,12 +113,13 @@ const BlockchainStatusModal = ({
           throw new Error(`Unknown transaction type: ${transactionType}`);
       }
 
-      // Success
+      // ✅ SUCCESS - Real blockchain transaction completed
       console.log('✅ Blockchain transaction successful:', result);
+      
       setStatus('success');
       setTransactionHash(result.txHash);
       setShowShare(true);
-      setDebugInfo('Blockchain transaction completed');
+      setDebugInfo('Transaction confirmed on ApeChain');
       
       if (onTransactionComplete) {
         onTransactionComplete({
@@ -133,23 +133,43 @@ const BlockchainStatusModal = ({
 
     } catch (error) {
       console.error('❌ Blockchain transaction failed:', error);
-      setDebugInfo(`Error: ${error.message}`);
       
-      if (error.message === 'CANCELLED_BY_USER') {
+      // Handle user cancellation gracefully
+      if (error.message === 'CANCELLED_BY_USER' || 
+          error.message?.includes('user rejected') ||
+          error.message?.includes('User denied') ||
+          error.code === 4001) {
         console.log('🚫 User cancelled transaction');
         onClose();
         return;
       }
       
+      // Map technical errors to user-friendly messages
       let userMessage = error.message;
+      
       if (error.message?.includes('insufficient funds')) {
         userMessage = 'Insufficient APE balance for this transaction';
       } else if (error.message?.includes('gas')) {
-        userMessage = 'Transaction failed due to gas issues. Please try again.';
+        userMessage = 'Transaction failed due to gas issues. Please try with a higher gas limit.';
+      } else if (error.message?.includes('Wallet not connected')) {
+        userMessage = 'Please connect your wallet and try again';
+      } else if (error.message?.includes('Wrong network')) {
+        userMessage = 'Please switch to ApeChain network and try again';
+      } else if (error.message?.includes('Campaign not found')) {
+        userMessage = 'Campaign not found. Please refresh the page and try again.';
+      } else if (error.message?.includes('Goal must be greater than 0')) {
+        userMessage = 'Campaign goal must be greater than 0 APE';
+      } else if (error.message?.includes('Only creator allowed')) {
+        userMessage = 'Only the campaign creator can perform this action';
+      } else if (error.message?.includes('Campaign not successful')) {
+        userMessage = 'Campaign must reach its goal before withdrawal';
+      } else if (error.message?.includes('Smart contract integration not available')) {
+        userMessage = 'Blockchain integration error. Please refresh the page and try again.';
       }
       
       setStatus('error');
       setError(userMessage);
+      setDebugInfo(`Error: ${error.message}`);
     }
   };
 
@@ -192,7 +212,7 @@ const BlockchainStatusModal = ({
         
       case 'copy':
         const fullText = `${text}\n\n🔗 ${url}\n\n📊 Transaction: ${transactionHash}`;
-        if (navigator.clipboard) {
+        if (navigator.clipboard && window.isSecureContext) {
           navigator.clipboard.writeText(fullText).then(() => {
             console.log('✅ Text copied to clipboard');
             setCopySuccess(true);
@@ -227,6 +247,7 @@ const BlockchainStatusModal = ({
       console.log('✅ Fallback copy successful');
     } catch (err) {
       console.error('❌ Fallback copy failed:', err);
+      alert('Copy failed. Please copy manually: ' + text);
     }
     document.body.removeChild(textArea);
   };
@@ -238,6 +259,7 @@ const BlockchainStatusModal = ({
       window.open(apeScanUrl, '_blank');
     } else {
       console.warn('⚠️ No transaction hash available');
+      alert('Transaction hash not available');
     }
   };
 
@@ -251,11 +273,11 @@ const BlockchainStatusModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 relative overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 relative overflow-hidden z-[9999]">
         {/* Debug Info - nur in Development */}
         {process.env.NODE_ENV === 'development' && debugInfo && (
-          <div className="absolute top-2 left-2 text-xs text-gray-500 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">
+          <div className="absolute top-2 left-2 text-xs text-gray-500 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded max-w-xs truncate">
             {debugInfo}
           </div>
         )}
@@ -337,16 +359,14 @@ const BlockchainStatusModal = ({
               )}
             </h3>
             
-            <p className="text-gray-600 dark:text-gray-400">
-              {status === 'pending' 
-                ? USE_SIMULATION 
-                  ? 'Simulating blockchain transaction...' 
-                  : 'Your transaction is being confirmed on the blockchain...'
-                : status === 'success'
-                ? `Your ${transactionType} was successful!`
-                : error || 'Transaction failed. Please try again.'
-              }
-            </p>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">
+  {status === 'pending' 
+    ? 'Processing on blockchain...'
+    : status === 'success'
+    ? `${transactionType} successful!`
+    : 'Please connect wallet and try again.'
+  }
+</p>
 
             {/* Transaction Details */}
             {status === 'success' && (
@@ -374,11 +394,6 @@ const BlockchainStatusModal = ({
                       {transactionHash.slice(0, 8)}...{transactionHash.slice(-6)}
                     </button>
                   </div>
-                  {USE_SIMULATION && (
-                    <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
-                      ⚠️ Development Mode - Simulated Transaction
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -390,14 +405,14 @@ const BlockchainStatusModal = ({
           <div className="mb-6">
             <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
               <span>Blockchain Status</span>
-              <span>{USE_SIMULATION ? 'Simulating...' : 'Confirming...'}</span>
+              <span>Confirming...</span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
               <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full animate-pulse" style={{width: '65%'}}></div>
             </div>
             <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
               <span>Pending</span>
-              <span>{USE_SIMULATION ? 'Dev Mode' : '2-3 blocks'}</span>
+              <span>Awaiting confirmation</span>
             </div>
           </div>
         )}
@@ -443,7 +458,7 @@ const BlockchainStatusModal = ({
           </div>
         )}
 
-        {/* Action Buttons */}
+     {/* Action Buttons */}
         <div className="flex gap-3">
           {status === 'success' ? (
             <>
@@ -469,7 +484,7 @@ const BlockchainStatusModal = ({
                 Close
               </button>
               <button
-                onClick={handleRetry}
+                onClick={() => setStatus('pending')}
                 className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
               >
                 Retry
@@ -490,7 +505,6 @@ const BlockchainStatusModal = ({
         <div className="mt-4 text-center">
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Powered by ApeChain • Decentralized & Transparent
-            {USE_SIMULATION && ' • Development Mode'}
           </p>
         </div>
       </div>
@@ -504,7 +518,8 @@ const BlockchainStatusModal = ({
         .animate-fadeIn {
           animation: fadeIn 0.5s ease-out;
         }
-      `}</style>
+      `}
+      </style>
     </div>
   );
 };

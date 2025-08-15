@@ -12,7 +12,8 @@ import { BarChart3, Trophy } from 'lucide-react';
 import CelebrationFireworks from '../components/CelebrationFireworks';
 import { getCampaignStatus, campaignFilters, filterCampaigns } from './hooks/useCampaignManager';
 import { ENSName } from './hooks/useENS';
-import FloatingThemeSwitch from '../components/FloatingThemeSwitch';
+import { useBlockchainStatus } from '../components/BlockchainStatusModal';
+import { useSmartContract } from './hooks/useSmartContract';
 
 
 // Enhanced DonateModal für page.js
@@ -80,6 +81,7 @@ const DonateModal = ({ isOpen, campaign, onClose, onDonate, isConnected, isCorre
     try {
       // Process donation
 await onDonate(campaign.id, donationAmount);
+
 
 console.log('✅ Donation completed successfully');
     } catch (error) {
@@ -301,6 +303,9 @@ export default function GoApeMe() {
     loadCampaignFromIPFS,
     clearAllCampaigns
   } = useCampaignManager();
+
+  const smartContract = useSmartContract();
+const { showStatus, StatusModal } = useBlockchainStatus();
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
@@ -320,40 +325,103 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
   
   const handleCreateCampaign = async (campaignData) => {
     try {
-      const result = await createCampaign(campaignData, address);
+      console.log('🎯 Starting campaign creation process:', campaignData.title);
       
-      // Modal schließt sich automatisch über das Modal selbst
-      console.log('Campaign created successfully:', result);
+      // 🚀 NEU: Zeige Blockchain Status Modal
+      showStatus({
+        transactionType: 'campaign',
+        campaignTitle: campaignData.title,
+        amount: '0',
+        campaignData: {
+          ...campaignData,
+          target: parseFloat(campaignData.target),
+          durationInDays: 30
+        },
+        onTransactionComplete: async (result) => {
+          console.log('✅ Blockchain transaction completed, now creating campaign...');
+          
+          if (result.success) {
+            try {
+              // Führe die echte Campaign Creation aus
+              await createCampaign(campaignData, address);
+              console.log('✅ Campaign created successfully with blockchain integration');
+            } catch (campaignError) {
+              console.error('❌ Failed to create campaign after blockchain success:', campaignError);
+              alert('Blockchain transaction successful, but campaign creation failed: ' + campaignError.message);
+            }
+          }
+        }
+      });
+      
     } catch (error) {
-      console.error('Failed to create campaign:', error);
+      console.error('❌ Failed to start campaign creation:', error);
       throw error; // Re-throw für Modal Error Handling
     }
   };
   
-  const handleDonate = async (campaignId, amount) => {
+const handleDonate = async (campaignId, amount) => {
   try {
+    console.log('🎯 handleDonate called with:', { campaignId, amount });
+    
+    // Schließe Donate Modal sofort
     setIsDonateModalOpen(false);
     setSelectedCampaign(null);
     
-    // Check if campaign will be completed by this donation
+    // Finde Campaign
     const campaign = campaigns.find(c => c.id === campaignId);
-    const oldProgress = campaign.target > 0 ? (campaign.raised / campaign.target) * 100 : 0;
-    const newProgress = campaign.target > 0 ? ((campaign.raised + amount) / campaign.target) * 100 : 0;
-    const willComplete = oldProgress < 100 && newProgress >= 100;
+    console.log('📋 Found campaign:', campaign);
     
-    // Process donation
-    await addDonation(campaignId, amount);
-    
-    // Show celebration if campaign just got completed
-    if (willComplete) {
-      setCelebrationCampaign(campaign);
-      setShowCelebration(true);
+    if (!campaign) {
+      throw new Error('Campaign not found');
     }
     
-    console.log('✅ Donation completed successfully');
+    // Bestimme echte Campaign ID für Blockchain
+    const blockchainCampaignId = campaign.blockchainId || campaign.id;
+    console.log('⛓️ Using blockchain campaign ID:', blockchainCampaignId);
+    
+    // Zeige Status Modal mit korrekten Parametern
+    showStatus({
+      transactionType: 'donation',
+      campaignTitle: campaign.title,
+      amount: amount.toString(),
+      campaignId: blockchainCampaignId, // ✅ WICHTIG: Echte Campaign ID
+      onTransactionComplete: async (result) => {
+        console.log('✅ Blockchain transaction completed:', result);
+        
+        if (result.success) {
+          try {
+            // Check if campaign will be completed by this donation
+            const oldProgress = campaign.target > 0 ? (campaign.raised / campaign.target) * 100 : 0;
+            const newProgress = campaign.target > 0 ? ((campaign.raised + amount) / campaign.target) * 100 : 0;
+            const willComplete = oldProgress < 100 && newProgress >= 100;
+            
+            // ⚠️ WICHTIG: Nicht nochmal addDonation() aufrufen!
+            // Das Smart Contract hat bereits die Donation verarbeitet
+            console.log('💰 Donation completed on blockchain, updating UI...');
+            
+            // Show celebration if campaign just got completed
+            if (willComplete) {
+              setCelebrationCampaign(campaign);
+              setShowCelebration(true);
+            }
+            
+            console.log('✅ Donation flow completed successfully');
+            
+            // Campaigns werden automatisch von useCampaignManager refreshed
+            // Kein manueller addDonation() Call nötig!
+            
+          } catch (error) {
+            console.error('❌ Failed to update UI after donation:', error);
+            // Transaction war erfolgreich, nur UI-Update failed
+            alert('Donation successful! Please refresh the page to see updates.');
+          }
+        }
+      }
+    });
+    
   } catch (error) {
-    console.error('❌ Failed to process donation:', error);
-    alert('Failed to process donation: ' + error.message);
+    console.error('❌ Failed to start donation process:', error);
+    alert('Failed to start donation: ' + error.message);
   }
 };
 
@@ -802,8 +870,8 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
   }}
 />
 
-      {/* Floating Theme Switch */}
-      <FloatingThemeSwitch />
+<StatusModal smartContract={smartContract} />
+
     </div>
     
   );
