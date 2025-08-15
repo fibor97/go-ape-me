@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, X } from 'lucide-react';
 
-const DonateModal = ({ isOpen, campaign, onClose, onDonate, isConnected, isCorrectNetwork, chainName }) => {
+const DonateModal = ({ isOpen, campaign, onClose, onDonate, isConnected, isCorrectNetwork, chainName, smartContract }) => {
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 

@@ -582,6 +582,7 @@ const handleDonate = async (campaignId, amount) => {
   isConnected={isConnected}
   isCorrectNetwork={isCorrectNetwork}
   chainName={chainName}
+  smartContract={smartContract}
 />
 
       {/* Wallet Modal */}

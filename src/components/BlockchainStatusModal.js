@@ -340,12 +340,7 @@ const BlockchainStatusModal = ({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 relative overflow-hidden z-[9999]">
-        {/* Debug Info - nur in Development */}
-        {process.env.NODE_ENV === 'development' && debugInfo && (
-          <div className="absolute top-2 left-2 text-xs text-gray-500 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded max-w-xs truncate">
-            {debugInfo}
-          </div>
-        )}
+      
 
         {/* Animated Background Pattern */}
         <div className="absolute inset-0 opacity-5">
@@ -536,53 +531,103 @@ const BlockchainStatusModal = ({
           </div>
         )}
 
-        {/* ✅ FIXED: Action Buttons */}
-        <div className="flex gap-3">
-          {status === 'success' ? (
-            <>
-              <button
-                type="button" // ✅ FIX: Verhindert Form-Submission
-                onClick={handleViewOnApeScan}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium transition-colors cursor-pointer"
-              >
-                View on ApeScan
-              </button>
-              <button
-                type="button" // ✅ FIX: Verhindert Form-Submission
-                onClick={handleClose}
-                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-300 cursor-pointer"
-              >
-                Continue
-              </button>
-            </>
-          ) : status === 'error' ? (
-            <>
-              <button
-                type="button" // ✅ FIX: Verhindert Form-Submission
-                onClick={handleClose}
-                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-              >
-                Close
-              </button>
-              <button
-                type="button" // ✅ FIX: Verhindert Form-Submission
-                onClick={handleRetry}
-                className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3 px-4 rounded-lg font-medium transition-colors cursor-pointer"
-              >
-                Retry
-              </button>
-            </>
-          ) : (
-            <button
-              type="button" // ✅ FIX: Verhindert Form-Submission
-              onClick={handleClose}
-              disabled={status === 'pending'}
-              className="w-full py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {status === 'pending' ? 'Processing...' : 'Close'}
-            </button>
-          )}
-        </div>
+{/* ✅ FIXED: Action Buttons - Complete Version */}
+<div className="flex gap-3 relative z-10">
+  {status === 'success' ? (
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('🔍 ApeScan clicked');
+          handleViewOnApeScan();
+        }}
+        style={{ 
+          pointerEvents: 'auto',
+          cursor: 'pointer',
+          zIndex: 10
+        }}
+        className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+      >
+        View on ApeScan
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('➡️ Continue clicked');
+          handleClose();
+        }}
+        style={{ 
+          pointerEvents: 'auto',
+          cursor: 'pointer',
+          zIndex: 10
+        }}
+        className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-300"
+      >
+        Continue
+      </button>
+    </>
+  ) : status === 'error' ? (
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('🚪 Close clicked');
+          handleClose();
+        }}
+        style={{ 
+          pointerEvents: 'auto',
+          cursor: 'pointer',
+          zIndex: 10
+        }}
+        className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+      >
+        Close
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('🔄 Retry clicked');
+          handleRetry();
+        }}
+        style={{ 
+          pointerEvents: 'auto',
+          cursor: 'pointer',
+          zIndex: 10
+        }}
+        className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+      >
+        Retry
+      </button>
+    </>
+  ) : (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('🚪 Close clicked (pending)');
+        handleClose();
+      }}
+      disabled={status === 'pending'}
+      style={{ 
+        pointerEvents: 'auto',
+        cursor: status === 'pending' ? 'not-allowed' : 'pointer',
+        zIndex: 10
+      }}
+      className="w-full py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      {status === 'pending' ? 'Processing...' : 'Close'}
+    </button>
+  )}
+</div>
 
         {/* Blockchain Info */}
         <div className="mt-4 text-center">
