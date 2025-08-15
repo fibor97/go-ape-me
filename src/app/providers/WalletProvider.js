@@ -34,7 +34,7 @@ const initializeWagmi = () => {
   if (!config) {
     config = getDefaultConfig({
       appName: "Go-Ape-Me",
-      projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID, 
+      projectId: 'affcc49c4772c84584747c5cf31be853', 
       chains: [apeChain, mainnet, arbitrum],
       transports: {
         [apeChain.id]: http(),

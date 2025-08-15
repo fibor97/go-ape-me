@@ -1,544 +1,370 @@
-// 🔧 BLOCKCHAIN STATUS MODAL - DEBUG VERSION
+import React, { useState } from 'react';
+import { Plus, AlertCircle } from 'lucide-react';
+import { LoadingButton, IPFSUploadStatus } from './LoadingStates';
+import ImageUpload from './ImageUpload';
+import { useBlockchainStatus } from './BlockchainStatusModal';
 
-import React, { useState, useEffect } from 'react';
-import { X, Loader, CheckCircle, Share2, Twitter, Facebook, Copy, Clock, Zap } from 'lucide-react';
+const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    target: '',
+    category: 'Technology',
+    termsAccepted: false // ✅ NEU: Terms Checkbox
+  });
+  
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState(null);
+  const [uploadMessage, setUploadMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({}); // ✅ NEU: Error Handling
 
-const BlockchainStatusModal = ({ 
-  isOpen, 
-  onClose, 
-  transactionType = 'donation', 
-  campaignTitle = 'Amazing Campaign',
-  amount = '0',
-  campaignId = null,
-  campaignData = null,
-  onTransactionComplete
-}) => {
-  const [status, setStatus] = useState('pending');
-  const [transactionHash, setTransactionHash] = useState('');
-  const [showShare, setShowShare] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [error, setError] = useState(null);
-  const [debugInfo, setDebugInfo] = useState('');
+  const { showStatus, StatusModal } = useBlockchainStatus();
+  
+  // ✅ NEU: Validation Function
+  const validateForm = () => {
+    const newErrors = {};
 
-  // ⚠️ TEMPORARY: Fallback zur Simulation bis echte Blockchain funktioniert
-  const USE_SIMULATION = true; // Setze auf false wenn Blockchain ready ist
-
-  useEffect(() => {
-    if (isOpen && status === 'pending') {
-      setDebugInfo(`Starting ${transactionType} transaction...`);
-      
-      if (USE_SIMULATION) {
-        // 🔄 SIMULATION MODE - für Development
-        console.log('🧪 Using simulation mode for development');
-        const timer = setTimeout(() => {
-          setStatus('success');
-          const txHash = '0x' + Math.random().toString(16).substr(2, 40);
-          setTransactionHash(txHash);
-          setShowShare(true);
-          setDebugInfo('Simulation completed successfully');
-          
-          if (onTransactionComplete) {
-            onTransactionComplete({
-              txHash: txHash,
-              success: true,
-              simulation: true
-            });
-          }
-        }, 2000); // Kürzere Zeit für Testing
-        
-        return () => clearTimeout(timer);
-        
-      } else {
-        // 🔗 REAL BLOCKCHAIN MODE
-        processRealBlockchainTransaction();
-      }
+    if (!formData.title.trim()) {
+      newErrors.title = 'Campaign title is required';
+    } else if (formData.title.trim().length < 5) {
+      newErrors.title = 'Title must be at least 5 characters';
     }
-  }, [isOpen, status]);
 
-  const processRealBlockchainTransaction = async () => {
+    if (!formData.description.trim()) {
+      newErrors.description = 'Campaign description is required';
+    } else if (formData.description.trim().length < 20) {
+      newErrors.description = 'Description must be at least 20 characters';
+    }
+
+    const target = parseFloat(formData.target);
+    if (!formData.target) {
+      newErrors.target = 'Funding target is required';
+    } else if (isNaN(target) || target <= 0) {
+      newErrors.target = 'Target must be a positive number';
+    } else if (target < 1) {
+      newErrors.target = 'Minimum target is 1 APE';
+    }
+
+    // ✅ NEU: Terms Validation
+    if (!formData.termsAccepted) {
+      newErrors.termsAccepted = 'You must accept the Smart Contract terms to continue';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    // ✅ NEU: Validation vor Submit
+    if (!validateForm()) {
+      setUploadStatus('error');
+      setUploadMessage('Please fix the errors above and try again');
+      return;
+    }
+
+    console.log('🎯 Starting campaign creation with blockchain status:', formData.title);
+
+    setIsSubmitting(true);
+    setUploadStatus('uploading');
+    setUploadMessage('Preparing campaign data...');
+    
     try {
-      setDebugInfo('Checking wallet connection...');
+      // Kurze Vorbereitung anzeigen
+      setUploadMessage('Processing image...');
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Importiere useSmartContract dynamisch
-      const { useSmartContract } = await import('../app/hooks/useSmartContract');
-      const { 
-        donateToChain, 
-        createCampaignOnChain, 
-        withdrawFunds,
-        isConnected, 
-        isCorrectNetwork 
-      } = useSmartContract();
-
-      console.log('🔗 Blockchain Status:', {
-        isConnected,
-        isCorrectNetwork,
-        transactionType,
-        campaignId,
-        amount
+      setUploadMessage('Connecting to IPFS network...');
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // 🚀 NEU: Schließe Create Modal und zeige Status Modal
+      handleClose();
+      
+      // Bereite Campaign-Daten vor
+      const campaignWithImage = {
+        ...formData,
+        image: imagePreview,
+        hasCustomImage: !!selectedImage && !!imagePreview
+      };
+      
+      console.log('📸 Campaign with image data:', {
+        hasImage: !!imagePreview,
+        hasCustomImage: campaignWithImage.hasCustomImage,
+        imagePreviewLength: imagePreview ? imagePreview.length : 0
       });
-
-      if (!isConnected) {
-        throw new Error('Wallet not connected');
-      }
       
-      if (!isCorrectNetwork) {
-        throw new Error('Please switch to ApeChain');
-      }
-
-      setDebugInfo(`Processing ${transactionType} on blockchain...`);
-
-      let result;
-      switch (transactionType) {
-        case 'donation':
-          if (!campaignId || !amount) {
-            throw new Error('Campaign ID and amount required for donation');
+      // 🚀 NEU: Zeige Blockchain Status Modal
+      showStatus({
+        transactionType: 'campaign',
+        campaignTitle: formData.title,
+        amount: '0',
+        onTransactionComplete: async (result) => {
+          console.log('✅ Blockchain transaction completed, now creating campaign...');
+          
+          if (result.success) {
+            try {
+              // Führe die echte Campaign Creation aus
+              await onSubmit(campaignWithImage);
+              console.log('✅ Campaign created successfully with blockchain integration');
+            } catch (campaignError) {
+              console.error('❌ Failed to create campaign after blockchain success:', campaignError);
+              alert('Blockchain transaction successful, but campaign creation failed: ' + campaignError.message);
+            }
+          } else {
+            console.error('❌ Blockchain transaction failed');
           }
-          result = await donateToChain(campaignId, parseFloat(amount));
-          break;
-
-        case 'campaign':
-          if (!campaignData) {
-            throw new Error('Campaign data required for creation');
-          }
-          result = await createCampaignOnChain(campaignData);
-          break;
-
-        case 'withdrawal':
-          if (!campaignId) {
-            throw new Error('Campaign ID required for withdrawal');
-          }
-          result = await withdrawFunds(campaignId);
-          break;
-
-        default:
-          throw new Error(`Unknown transaction type: ${transactionType}`);
-      }
-
-      // Success
-      console.log('✅ Blockchain transaction successful:', result);
-      setStatus('success');
-      setTransactionHash(result.txHash);
-      setShowShare(true);
-      setDebugInfo('Blockchain transaction completed');
-      
-      if (onTransactionComplete) {
-        onTransactionComplete({
-          txHash: result.txHash,
-          blockNumber: result.blockNumber,
-          gasUsed: result.gasUsed,
-          success: true,
-          result: result
-        });
-      }
-
-    } catch (error) {
-      console.error('❌ Blockchain transaction failed:', error);
-      setDebugInfo(`Error: ${error.message}`);
-      
-      if (error.message === 'CANCELLED_BY_USER') {
-        console.log('🚫 User cancelled transaction');
-        onClose();
-        return;
-      }
-      
-      let userMessage = error.message;
-      if (error.message?.includes('insufficient funds')) {
-        userMessage = 'Insufficient APE balance for this transaction';
-      } else if (error.message?.includes('gas')) {
-        userMessage = 'Transaction failed due to gas issues. Please try again.';
-      }
-      
-      setStatus('error');
-      setError(userMessage);
-    }
-  };
-
-  // Reset beim Schließen
-  useEffect(() => {
-    if (!isOpen) {
-      setStatus('pending');
-      setShowShare(false);
-      setTransactionHash('');
-      setCopySuccess(false);
-      setError(null);
-      setDebugInfo('');
-    }
-  }, [isOpen]);
-
-  const shareTexts = {
-    donation: `🦍 Gerade ${amount} APE für "${campaignTitle}" auf GoApeMe gespendet! Gemeinsam machen wir einen Unterschied für innovative Projekte. 🌍✨ #GoApeMe #Crowdfunding #ApeChain`,
-    campaign: `🚀 Neue Kampagne "${campaignTitle}" auf GoApeMe gestartet! Helft mir dabei, meine Vision zu verwirklichen und die Zukunft zu gestalten. 🦍💚 #GoApeMe #Innovation #Crowdfunding`,
-    withdrawal: `💰 Erfolgreich ${amount} APE von meiner GoApeMe Kampagne "${campaignTitle}" abgehoben! Danke an alle Unterstützer! 🙏 #GoApeMe #Success #ApeChain`
-  };
-
-  const handleShare = (platform) => {
-    const text = shareTexts[transactionType] || shareTexts.donation;
-    const url = `https://goape.me/campaign/${campaignTitle.toLowerCase().replace(/\s+/g, '-')}?tx=${transactionHash}`;
-    
-    console.log('🔗 Sharing on:', platform, { text, url });
-    
-    switch (platform) {
-      case 'twitter':
-        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-        console.log('🐦 Opening Twitter:', twitterUrl);
-        window.open(twitterUrl, '_blank', 'width=550,height=420,scrollbars=yes,resizable=yes');
-        break;
-        
-      case 'facebook':
-        const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`;
-        console.log('📘 Opening Facebook:', facebookUrl);
-        window.open(facebookUrl, '_blank', 'width=550,height=420,scrollbars=yes,resizable=yes');
-        break;
-        
-      case 'copy':
-        const fullText = `${text}\n\n🔗 ${url}\n\n📊 Transaction: ${transactionHash}`;
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(fullText).then(() => {
-            console.log('✅ Text copied to clipboard');
-            setCopySuccess(true);
-            setTimeout(() => setCopySuccess(false), 2000);
-          }).catch(err => {
-            console.error('❌ Failed to copy text:', err);
-            fallbackCopy(fullText);
-          });
-        } else {
-          fallbackCopy(fullText);
         }
-        break;
-        
-      default:
-        console.warn('Unknown sharing platform:', platform);
+      });
+      
+    } catch (error) {
+      console.error('❌ Failed to start campaign creation process:', error);
+      setUploadStatus('error');
+      setUploadMessage(error.message || 'Failed to create campaign. Please try again.');
+      setIsSubmitting(false);
     }
   };
-
-  const fallbackCopy = (text) => {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-999999px';
-    textArea.style.top = '-999999px';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    try {
-      document.execCommand('copy');
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-      console.log('✅ Fallback copy successful');
-    } catch (err) {
-      console.error('❌ Fallback copy failed:', err);
-    }
-    document.body.removeChild(textArea);
-  };
-
-  const handleViewOnApeScan = () => {
-    if (transactionHash) {
-      const apeScanUrl = `https://apescan.io/tx/${transactionHash}`;
-      console.log('🔍 Opening ApeScan:', apeScanUrl);
-      window.open(apeScanUrl, '_blank');
-    } else {
-      console.warn('⚠️ No transaction hash available');
-    }
+  
+  const handleClose = () => {
+    // Cancel immer erlauben - auch während Upload
+    setFormData({ 
+      title: '', 
+      description: '', 
+      target: '', 
+      category: 'Technology',
+      termsAccepted: false // ✅ NEU: Reset Terms
+    });
+    setSelectedImage(null);
+    setImagePreview(null);
+    setUploadStatus(null);
+    setUploadMessage('');
+    setIsSubmitting(false);
+    setErrors({}); // ✅ NEU: Reset Errors
+    onClose();
   };
 
   const handleRetry = () => {
-    console.log('🔄 Retrying transaction...');
-    setStatus('pending');
-    setError(null);
-    setDebugInfo('');
+    setUploadStatus(null);
+    setUploadMessage('');
+    handleSubmit();
   };
 
-  if (!isOpen) return null;
+  const handleImageSelect = (file, preview) => {
+    setSelectedImage(file);
+    setImagePreview(preview);
+  };
 
+  // ✅ NEU: Input Change Handler mit Error Clearing
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: null }));
+    }
+  };
+  
+  if (!isOpen) return <StatusModal />;
+  
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 relative overflow-hidden">
-        {/* Debug Info - nur in Development */}
-        {process.env.NODE_ENV === 'development' && debugInfo && (
-          <div className="absolute top-2 left-2 text-xs text-gray-500 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">
-            {debugInfo}
+    <>
+    <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+        <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+          Create New Campaign
+        </h2>
+        
+        {/* Upload Status */}
+        {uploadStatus && (
+          <div className="mb-4">
+            <IPFSUploadStatus 
+              status={uploadStatus}
+              message={uploadMessage}
+              onRetry={uploadStatus === 'error' ? handleRetry : null}
+            />
           </div>
         )}
-
-        {/* Animated Background Pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-0 left-0 w-32 h-32 bg-purple-500 rounded-full -translate-x-16 -translate-y-16 animate-pulse"></div>
-          <div className="absolute bottom-0 right-0 w-24 h-24 bg-pink-500 rounded-full translate-x-12 translate-y-12 animate-pulse delay-1000"></div>
-        </div>
-
-        {/* Schließen Button */}
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors z-10"
-        >
-          <X size={24} />
-        </button>
-
-        {/* Status Circle */}
-        <div className="flex flex-col items-center mb-8 relative">
-          <div className="relative">
-            <div className={`w-32 h-32 rounded-full border-4 relative ${
-              status === 'pending' 
-                ? 'border-blue-200 dark:border-blue-800' 
-                : status === 'success'
-                ? 'border-green-200 dark:border-green-800'
-                : 'border-red-200 dark:border-red-800'
-            }`}>
-              {/* Animierter Ring */}
-              {status === 'pending' && (
-                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 animate-spin"></div>
-              )}
-              
-              {/* Pulsierender Ring für Pending */}
-              {status === 'pending' && (
-                <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-ping"></div>
-              )}
-
-              {/* Erfolgs-Animation */}
-              {status === 'success' && (
-                <div className="absolute inset-0 rounded-full bg-green-500/20 animate-pulse"></div>
-              )}
-
-              {/* Error Animation */}
-              {status === 'error' && (
-                <div className="absolute inset-0 rounded-full bg-red-500/20 animate-pulse"></div>
-              )}
-
-              {/* Icon im Zentrum */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                {status === 'pending' ? (
-                  <div className="relative">
-                    <Zap className="w-12 h-12 text-blue-500 animate-pulse" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full animate-ping"></div>
-                    </div>
-                  </div>
-                ) : status === 'success' ? (
-                  <CheckCircle className="w-12 h-12 text-green-500" />
-                ) : (
-                  <X className="w-12 h-12 text-red-500" />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Status Text */}
-          <div className="mt-6 text-center">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              {status === 'pending' ? (
-                <>
-                  <Loader className="w-5 h-5 inline animate-spin mr-2" />
-                  Processing on ApeChain
-                </>
-              ) : status === 'success' ? (
-                '🎉 Transaction Successful!'
-              ) : (
-                '❌ Transaction Failed'
-              )}
-            </h3>
-            
-            <p className="text-gray-600 dark:text-gray-400">
-              {status === 'pending' 
-                ? USE_SIMULATION 
-                  ? 'Simulating blockchain transaction...' 
-                  : 'Your transaction is being confirmed on the blockchain...'
-                : status === 'success'
-                ? `Your ${transactionType} was successful!`
-                : error || 'Transaction failed. Please try again.'
-              }
+        
+        <div className="space-y-4">
+          {/* Image Upload */}
+          <div>
+            <ImageUpload 
+              onImageSelect={handleImageSelect}
+              currentImage={imagePreview}
+              disabled={isSubmitting}
+            />
+            {/* ✅ NEU: 2MB File Size Notice */}
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              📁 Maximum file size: 2MB | Supported formats: PNG, JPG, GIF
             </p>
-
-            {/* Transaction Details */}
-            {status === 'success' && (
-              <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <div className="text-sm space-y-1">
-                  {amount !== '0' && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Amount:</span>
-                      <span className="font-semibold text-purple-600 dark:text-purple-400">{amount} APE</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Campaign:</span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100 truncate ml-2 max-w-32">
-                      {campaignTitle}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 dark:text-gray-400">TX Hash:</span>
-                    <button
-                      onClick={() => handleShare('copy')}
-                      className="font-mono text-xs text-gray-700 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors"
-                      title="Click to copy transaction hash"
-                    >
-                      {transactionHash.slice(0, 8)}...{transactionHash.slice(-6)}
-                    </button>
-                  </div>
-                  {USE_SIMULATION && (
-                    <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
-                      ⚠️ Development Mode - Simulated Transaction
-                    </div>
-                  )}
-                </div>
-              </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-800 dark:text-gray-200">
+              Title *
+            </label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => handleInputChange('title', e.target.value)}
+              disabled={isSubmitting}
+              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50 ${
+                errors.title 
+                  ? 'border-red-300 dark:border-red-600' 
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
+              placeholder="Enter campaign title..."
+            />
+            {/* ✅ NEU: Error Message */}
+            {errors.title && (
+              <p className="text-red-600 dark:text-red-400 text-sm mt-1">{errors.title}</p>
             )}
           </div>
-        </div>
-
-        {/* Progress Indicator */}
-        {status === 'pending' && (
-          <div className="mb-6">
-            <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
-              <span>Blockchain Status</span>
-              <span>{USE_SIMULATION ? 'Simulating...' : 'Confirming...'}</span>
-            </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-              <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full animate-pulse" style={{width: '65%'}}></div>
-            </div>
-            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-              <span>Pending</span>
-              <span>{USE_SIMULATION ? 'Dev Mode' : '2-3 blocks'}</span>
-            </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-800 dark:text-gray-200">
+              Description *
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              disabled={isSubmitting}
+              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 h-24 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50 resize-none ${
+                errors.description 
+                  ? 'border-red-300 dark:border-red-600' 
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
+              placeholder="Describe your campaign..."
+            />
+            {/* ✅ NEU: Error Message */}
+            {errors.description && (
+              <p className="text-red-600 dark:text-red-400 text-sm mt-1">{errors.description}</p>
+            )}
           </div>
-        )}
-
-        {/* Share Section */}
-        {showShare && status === 'success' && (
-          <div className="animate-fadeIn">
-            <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 text-center">
-              🎊 Share Your Success!
-            </h4>
-            
-            <div className="grid grid-cols-3 gap-3 mb-6">
-              <button
-                onClick={() => handleShare('twitter')}
-                className="flex flex-col items-center p-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors group"
-              >
-                <Twitter className="w-6 h-6 text-blue-500 mb-1 group-hover:scale-110 transition-transform" />
-                <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">Twitter</span>
-              </button>
-              
-              <button
-                onClick={() => handleShare('facebook')}
-                className="flex flex-col items-center p-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors group"
-              >
-                <Facebook className="w-6 h-6 text-blue-600 mb-1 group-hover:scale-110 transition-transform" />
-                <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">Facebook</span>
-              </button>
-              
-              <button
-                onClick={() => handleShare('copy')}
-                className="copy-button flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors group"
-              >
-                <Copy className="w-6 h-6 text-gray-600 dark:text-gray-400 mb-1 group-hover:scale-110 transition-transform" />
-                <span className={`text-xs font-medium transition-colors ${
-                  copySuccess 
-                    ? 'text-green-600 dark:text-green-400' 
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}>
-                  {copySuccess ? '✓ Copied!' : 'Copy'}
-                </span>
-              </button>
-            </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-800 dark:text-gray-200">
+              Goal (APE) *
+            </label>
+            <input
+              type="number"
+              value={formData.target}
+              onChange={(e) => handleInputChange('target', e.target.value)}
+              placeholder="100"
+              min="1"
+              step="1"
+              disabled={isSubmitting}
+              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50 ${
+                errors.target 
+                  ? 'border-red-300 dark:border-red-600' 
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
+            />
+            {/* ✅ NEU: Error Message */}
+            {errors.target && (
+              <p className="text-red-600 dark:text-red-400 text-sm mt-1">{errors.target}</p>
+            )}
           </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex gap-3">
-          {status === 'success' ? (
-            <>
-              <button
-                onClick={handleViewOnApeScan}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
-              >
-                View on ApeScan
-              </button>
-              <button
-                onClick={onClose}
-                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-300"
-              >
-                Continue
-              </button>
-            </>
-          ) : status === 'error' ? (
-            <>
-              <button
-                onClick={onClose}
-                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Close
-              </button>
-              <button
-                onClick={handleRetry}
-                className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
-              >
-                Retry
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={onClose}
-              disabled={status === 'pending'}
-              className="w-full py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-800 dark:text-gray-200">
+              Category
+            </label>
+            <select
+              value={formData.category}
+              onChange={(e) => handleInputChange('category', e.target.value)}
+              disabled={isSubmitting}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
             >
-              {status === 'pending' ? 'Processing...' : 'Close'}
-            </button>
-          )}
-        </div>
+              <option value="Technology">Technology</option>
+              <option value="Environment">Environment</option>
+              <option value="Social">Social</option>
+              <option value="Art">Art</option>
+              <option value="Education">Education</option>
+            </select>
+          </div>
 
-        {/* Blockchain Info */}
-        <div className="mt-4 text-center">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Powered by ApeChain • Decentralized & Transparent
-            {USE_SIMULATION && ' • Development Mode'}
-          </p>
+          {/* ✅ NEU: Smart Contract Terms & Agreement */}
+          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="termsAccepted"
+                checked={formData.termsAccepted}
+                onChange={(e) => handleInputChange('termsAccepted', e.target.checked)}
+                disabled={isSubmitting}
+                className="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded disabled:opacity-50"
+              />
+              <div className="flex-1">
+                <label htmlFor="termsAccepted" className="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer">
+                  I understand and agree to the Smart Contract terms *
+                </label>
+                <div className="mt-2 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                  <p><strong>📋 How the Smart Contract works:</strong></p>
+                  <ul className="space-y-1 ml-4">
+                    <li>• <strong>Escrow System:</strong> All donations held securely until goal reached</li>
+                    <li>• <strong>Success:</strong> You receive 95% of funds, 5% platform fee</li>
+                    <li>• <strong>Failure:</strong> Contributors get 95% refunded automatically</li>
+                    <li>• <strong>Duration:</strong> Maximum 30 days campaign length</li>
+                    <li>• <strong>Transparency:</strong> All transactions visible on ApeChain</li>
+                    <li>• <strong>Final:</strong> No reversals once goal reached and withdrawn</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            {/* ✅ NEU: Terms Error Message */}
+            {errors.termsAccepted && (
+              <p className="text-red-600 dark:text-red-400 text-sm mt-2 ml-7">{errors.termsAccepted}</p>
+            )}
+          </div>
+
+          {/* ✅ NEU: Contract Info Box */}
+          <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+              <div className="text-xs text-purple-800 dark:text-purple-200">
+                <p className="font-semibold mb-1">🔒 Decentralized & Secure</p>
+                <p className="leading-relaxed">
+                  Your campaign runs on ApeChain's smart contract. No central authority can manipulate funds. 
+                  <a 
+                    href="https://apescan.io/address/0x18f3b0210BE24c1b3bcFAEA5e113B30521033d6C"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-purple-700 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-200 underline hover:no-underline transition-colors"
+                    title="View contract on ApeScan"
+                  >
+                    Contract: 0x18f3...3d6C ↗
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={handleClose}
+              className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+            >
+              Cancel
+            </button>
+            
+            <LoadingButton
+              onClick={handleSubmit}
+              isLoading={isSubmitting}
+              loadingText="Creating..."
+              disabled={uploadStatus === 'success' || !formData.termsAccepted} // ✅ NEU: Disabled ohne Terms
+              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-50"
+            >
+              <Plus className="w-5 h-5" />
+              Create Campaign
+            </LoadingButton>
+          </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .animate-fadeIn {
-          animation: fadeIn 0.5s ease-out;
-        }
-      `}</style>
     </div>
+    <StatusModal />
+  </>
   );
 };
 
-// Hook für die Modal-Integration
-export const useBlockchainStatus = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalProps, setModalProps] = useState({});
-
-  const showStatus = (props) => {
-    console.log('🚀 Showing blockchain status modal with props:', props);
-    setModalProps(props);
-    setIsModalOpen(true);
-  };
-
-  const hideStatus = () => {
-    console.log('📴 Hiding blockchain status modal');
-    setIsModalOpen(false);
-    setModalProps({});
-  };
-
-  return {
-    isModalOpen,
-    modalProps,
-    showStatus,
-    hideStatus,
-    StatusModal: () => (
-      <BlockchainStatusModal
-        isOpen={isModalOpen}
-        onClose={hideStatus}
-        {...modalProps}
-      />
-    )
-  };
-};
-
-export default BlockchainStatusModal;
+export default CreateCampaignModal;
