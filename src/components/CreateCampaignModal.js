@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Plus, AlertCircle } from 'lucide-react';
 import { LoadingButton, IPFSUploadStatus } from './LoadingStates';
 import ImageUpload from './ImageUpload';
 import { useBlockchainStatus } from './BlockchainStatusModal';
@@ -21,6 +21,18 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
   const [errors, setErrors] = useState({}); // ✅ NEU: Error Handling
 
   const { showStatus, StatusModal } = useBlockchainStatus();
+
+useEffect(() => {
+  if (isOpen) {
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.body.style.overflow = 'unset';
+  }
+  
+  return () => {
+    document.body.style.overflow = 'unset';
+  };
+}, [isOpen]);
   
   // ✅ NEU: Validation Function
   const validateForm = () => {
@@ -38,12 +50,12 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
       newErrors.description = 'Description must be at least 20 characters';
     }
 
-    const target = parseFloat(formData.target);
+    const target = parseInt(formData.target);
     if (!formData.target) {
       newErrors.target = 'Funding target is required';
     } else if (isNaN(target) || target <= 0) {
       newErrors.target = 'Target must be a positive number';
-    } else if (target < 1) {
+    } else if (target < 1|| !Number.isInteger(target)) {
       newErrors.target = 'Minimum target is 1 APE';
     }
 
@@ -116,6 +128,19 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
           }
         }
       });
+     
+    // Body Scrolling blockieren
+useEffect(() => {
+  if (isOpen) {
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.body.style.overflow = 'unset';
+  }
+  
+  return () => {
+    document.body.style.overflow = 'unset';
+  };
+}, [isOpen]);  
       
     } catch (error) {
       console.error('❌ Failed to start campaign creation process:', error);
@@ -168,12 +193,22 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
   
   return (
     <>
-    <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xl flex items-center justify-center z-50 p-4">
+      {/* ✅ Close Button INNEN oben rechts */}
+
+      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200 dark:border-gray-600 relative">
         <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
           Create New Campaign
         </h2>
         
+        <button 
+  type="button"
+  onClick={onClose}
+  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors z-50 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+>
+  <X size={24} />
+</button>
+
         {/* Upload Status */}
         {uploadStatus && (
           <div className="mb-4">
@@ -253,6 +288,7 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
               placeholder="100"
               min="1"
               step="1"
+              pattern="[0-9]*"
               disabled={isSubmitting}
               className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50 ${
                 errors.target 

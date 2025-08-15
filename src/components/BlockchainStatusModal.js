@@ -355,6 +355,7 @@ const BlockchainStatusModal = ({
 
         {/* ✅ FIXED: Close Button */}
         <button 
+          type="button" // ✅ FIX: Verhindert Form-Submission
           onClick={handleClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors z-10 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
         >
@@ -452,6 +453,7 @@ const BlockchainStatusModal = ({
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 dark:text-gray-400">TX Hash:</span>
                     <button
+                      type="button" // ✅ FIX: Verhindert Form-Submission
                       onClick={() => handleCopyToClipboard(transactionHash)}
                       className="font-mono text-xs text-gray-700 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors"
                       title="Click to copy transaction hash"
@@ -490,8 +492,9 @@ const BlockchainStatusModal = ({
             </h4>
             
             <div className="grid grid-cols-3 gap-3 mb-6">
-              {/* ✅ UPDATED: X (Twitter) Button */}
+              {/* ✅ FIXED: X (Twitter) Button */}
               <button
+                type="button" // ✅ FIX: Verhindert Form-Submission
                 onClick={() => handleShare('x')}
                 className="flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-900/20 hover:bg-gray-100 dark:hover:bg-gray-900/30 rounded-lg transition-colors group cursor-pointer"
               >
@@ -504,8 +507,9 @@ const BlockchainStatusModal = ({
                 <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">X</span>
               </button>
               
-              {/* ✅ UPDATED: LinkedIn Button */}
+              {/* ✅ FIXED: LinkedIn Button */}
               <button
+                type="button" // ✅ FIX: Verhindert Form-Submission
                 onClick={() => handleShare('linkedin')}
                 className="flex flex-col items-center p-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors group cursor-pointer"
               >
@@ -513,8 +517,9 @@ const BlockchainStatusModal = ({
                 <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">LinkedIn</span>
               </button>
               
-              {/* ✅ UPDATED: Copy Button */}
+              {/* ✅ FIXED: Copy Button */}
               <button
+                type="button" // ✅ FIX: Verhindert Form-Submission
                 onClick={() => handleShare('copy')}
                 className="copy-button flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors group cursor-pointer"
               >
@@ -536,12 +541,14 @@ const BlockchainStatusModal = ({
           {status === 'success' ? (
             <>
               <button
+                type="button" // ✅ FIX: Verhindert Form-Submission
                 onClick={handleViewOnApeScan}
                 className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium transition-colors cursor-pointer"
               >
                 View on ApeScan
               </button>
               <button
+                type="button" // ✅ FIX: Verhindert Form-Submission
                 onClick={handleClose}
                 className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-300 cursor-pointer"
               >
@@ -551,12 +558,14 @@ const BlockchainStatusModal = ({
           ) : status === 'error' ? (
             <>
               <button
+                type="button" // ✅ FIX: Verhindert Form-Submission
                 onClick={handleClose}
                 className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
               >
                 Close
               </button>
               <button
+                type="button" // ✅ FIX: Verhindert Form-Submission
                 onClick={handleRetry}
                 className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3 px-4 rounded-lg font-medium transition-colors cursor-pointer"
               >
@@ -565,6 +574,7 @@ const BlockchainStatusModal = ({
             </>
           ) : (
             <button
+              type="button" // ✅ FIX: Verhindert Form-Submission
               onClick={handleClose}
               disabled={status === 'pending'}
               className="w-full py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"

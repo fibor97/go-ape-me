@@ -79,9 +79,15 @@ export function WalletProvider({ children }) {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider 
-          initialChain={apeChain}
-          showRecentTransactions={false}
-          coolMode={false}
+         initialChain={apeChain}
+         showRecentTransactions={true}
+         coolMode={false}
+         appInfo={{
+          appName: 'GoApeMe',
+          learnMoreUrl: 'https://goape.me',
+  }}
+  // ✅ AUTO-RECONNECT aktivieren
+  autoConnect={true} // Falls verfügbar
         >
           {children}
         </RainbowKitProvider>
