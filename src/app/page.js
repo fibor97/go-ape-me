@@ -68,6 +68,7 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
         transactionType: 'campaign',
         campaignTitle: campaignData.title,
         amount: '0',
+        smartContract: smartContract,
         campaignData: {
           ...campaignData,
           target: parseFloat(campaignData.target),
@@ -120,6 +121,7 @@ const handleDonate = async (campaignId, amount) => {
       transactionType: 'donation',
       campaignTitle: campaign.title,
       amount: amount.toString(),
+      smartContract: smartContract,
       campaignId: blockchainCampaignId, // ✅ WICHTIG: Echte Campaign ID
       onTransactionComplete: async (result) => {
         console.log('✅ Blockchain transaction completed:', result);

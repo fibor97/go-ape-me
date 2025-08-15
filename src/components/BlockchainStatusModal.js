@@ -38,6 +38,8 @@ const BlockchainStatusModal = ({
       
       const smartContractHook = smartContract;
 
+      
+
       const { 
         donateToChain, 
         createCampaignOnChain, 
@@ -540,7 +542,6 @@ const BlockchainStatusModal = ({
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          console.log('🔍 ApeScan clicked');
           handleViewOnApeScan();
         }}
         style={{ 
@@ -557,7 +558,6 @@ const BlockchainStatusModal = ({
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          console.log('➡️ Continue clicked');
           handleClose();
         }}
         style={{ 
@@ -577,7 +577,6 @@ const BlockchainStatusModal = ({
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          console.log('🚪 Close clicked');
           handleClose();
         }}
         style={{ 
@@ -613,7 +612,6 @@ const BlockchainStatusModal = ({
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('🚪 Close clicked (pending)');
         handleClose();
       }}
       disabled={status === 'pending'}
@@ -673,13 +671,14 @@ export const useBlockchainStatus = () => {
     modalProps,
     showStatus,
     hideStatus,
-    StatusModal: () => (
-      <BlockchainStatusModal
-        isOpen={isModalOpen}
-        onClose={hideStatus}
-        {...modalProps}
-      />
-    )
+    StatusModal: ({ smartContract }) => (
+  <BlockchainStatusModal
+    isOpen={isModalOpen}
+    onClose={hideStatus}
+    smartContract={smartContract}
+    {...modalProps}
+  />
+)
   };
 };
 
