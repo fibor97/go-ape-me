@@ -281,6 +281,7 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
               <option value="Social">Social</option>
               <option value="Art">Art</option>
               <option value="Education">Education</option>
+              <option value="Other">Other</option>
             </select>
           </div>
 

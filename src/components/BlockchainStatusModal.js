@@ -1,5 +1,6 @@
+// src/components/BlockchainStatusModal.js
 import React, { useState, useEffect } from 'react';
-import { X, Loader, CheckCircle, Share2, Twitter, Facebook, Copy, Clock, Zap } from 'lucide-react';
+import { X, Loader, CheckCircle, Share2, Copy, Clock, Zap, Linkedin } from 'lucide-react';
 
 const BlockchainStatusModal = ({ 
   isOpen, 
@@ -27,15 +28,15 @@ const BlockchainStatusModal = ({
   }, [isOpen, status]);
 
   const processRealBlockchainTransaction = async () => {
-  try {
-    setDebugInfo('Checking wallet and blockchain connection...');
-    
-    // 🚀 NEU: Verwende Smart Contract von Props
-    if (!smartContract) {
-      throw new Error('Smart contract not provided. Please connect your wallet.');
-    }
-    
-    const smartContractHook = smartContract;
+    try {
+      setDebugInfo('Checking wallet and blockchain connection...');
+      
+      // 🚀 NEU: Verwende Smart Contract von Props
+      if (!smartContract) {
+        throw new Error('Smart contract not provided. Please connect your wallet.');
+      }
+      
+      const smartContractHook = smartContract;
 
       const { 
         donateToChain, 
@@ -191,83 +192,147 @@ const BlockchainStatusModal = ({
     withdrawal: `💰 Erfolgreich ${amount} APE von meiner GoApeMe Kampagne "${campaignTitle}" abgehoben! Danke an alle Unterstützer! 🙏 #GoApeMe #Success #ApeChain`
   };
 
+  // ✅ UPDATED: Share Handler mit X (Twitter) und modernen Plattformen
   const handleShare = (platform) => {
-    const text = shareTexts[transactionType] || shareTexts.donation;
-    const url = `https://goape.me/campaign/${campaignTitle.toLowerCase().replace(/\s+/g, '-')}?tx=${transactionHash}`;
-    
-    console.log('🔗 Sharing on:', platform, { text, url });
-    
-    switch (platform) {
-      case 'twitter':
-        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-        console.log('🐦 Opening Twitter:', twitterUrl);
-        window.open(twitterUrl, '_blank', 'width=550,height=420,scrollbars=yes,resizable=yes');
-        break;
-        
-      case 'facebook':
-        const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`;
-        console.log('📘 Opening Facebook:', facebookUrl);
-        window.open(facebookUrl, '_blank', 'width=550,height=420,scrollbars=yes,resizable=yes');
-        break;
-        
-      case 'copy':
-        const fullText = `${text}\n\n🔗 ${url}\n\n📊 Transaction: ${transactionHash}`;
-        if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(fullText).then(() => {
-            console.log('✅ Text copied to clipboard');
-            setCopySuccess(true);
-            setTimeout(() => setCopySuccess(false), 2000);
-          }).catch(err => {
-            console.error('❌ Failed to copy text:', err);
-            fallbackCopy(fullText);
-          });
-        } else {
-          fallbackCopy(fullText);
-        }
-        break;
-        
-      default:
-        console.warn('Unknown sharing platform:', platform);
-    }
-  };
-
-  const fallbackCopy = (text) => {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-999999px';
-    textArea.style.top = '-999999px';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
     try {
-      document.execCommand('copy');
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-      console.log('✅ Fallback copy successful');
-    } catch (err) {
-      console.error('❌ Fallback copy failed:', err);
-      alert('Copy failed. Please copy manually: ' + text);
+      const text = shareTexts[transactionType] || shareTexts.donation;
+      const url = `https://goape.me/campaign/${campaignTitle.toLowerCase().replace(/\s+/g, '-')}?tx=${transactionHash}`;
+      
+      console.log('🔗 Sharing on:', platform, { text, url });
+      
+      switch (platform) {
+        case 'x':
+          const xUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+          console.log('🐦 Opening X (Twitter):', xUrl);
+          window.open(xUrl, '_blank', 'width=550,height=420,scrollbars=yes,resizable=yes');
+          break;
+          
+        case 'linkedin':
+          const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&title=${encodeURIComponent(campaignTitle)}&summary=${encodeURIComponent(text)}`;
+          console.log('💼 Opening LinkedIn:', linkedinUrl);
+          window.open(linkedinUrl, '_blank', 'width=550,height=420,scrollbars=yes,resizable=yes');
+          break;
+          
+        case 'copy':
+          const fullText = `${text}\n\n🔗 ${url}\n\n📊 Transaction: ${transactionHash}`;
+          handleCopyToClipboard(fullText);
+          break;
+          
+        default:
+          console.warn('Unknown sharing platform:', platform);
+      }
+    } catch (error) {
+      console.error('❌ Share failed:', error);
+      alert('Sharing failed. Please try again.');
     }
-    document.body.removeChild(textArea);
   };
 
+  // ✅ FIXED: Copy to Clipboard mit fallback
+  const handleCopyToClipboard = async (text) => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        console.log('✅ Text copied to clipboard');
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      } else {
+        fallbackCopy(text);
+      }
+    } catch (error) {
+      console.error('❌ Failed to copy text:', error);
+      fallbackCopy(text);
+    }
+  };
+
+  // ✅ FIXED: Fallback Copy Function
+  const fallbackCopy = (text) => {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      if (successful) {
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+        console.log('✅ Fallback copy successful');
+      } else {
+        throw new Error('Fallback copy failed');
+      }
+    } catch (error) {
+      console.error('❌ Fallback copy failed:', error);
+      // Show manual copy prompt
+      prompt('Copy this text manually:', text);
+    }
+  };
+
+  // ✅ FIXED: ApeScan Link Handler
   const handleViewOnApeScan = () => {
-    if (transactionHash) {
-      const apeScanUrl = `https://apescan.io/tx/${transactionHash}`;
-      console.log('🔍 Opening ApeScan:', apeScanUrl);
-      window.open(apeScanUrl, '_blank');
-    } else {
-      console.warn('⚠️ No transaction hash available');
-      alert('Transaction hash not available');
+    try {
+      if (transactionHash) {
+        const apeScanUrl = `https://apescan.io/tx/${transactionHash}`;
+        console.log('🔍 Opening ApeScan:', apeScanUrl);
+        window.open(apeScanUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        console.warn('⚠️ No transaction hash available');
+        alert('Transaction hash not available yet. Please wait for the transaction to complete.');
+      }
+    } catch (error) {
+      console.error('❌ Failed to open ApeScan:', error);
+      alert('Failed to open ApeScan. Please copy the transaction hash manually.');
     }
   };
 
+  // ✅ FIXED: Retry Handler
   const handleRetry = () => {
-    console.log('🔄 Retrying transaction...');
-    setStatus('pending');
-    setError(null);
-    setDebugInfo('');
+    try {
+      console.log('🔄 Retrying transaction...');
+      setStatus('pending');
+      setError(null);
+      setDebugInfo('');
+      setTransactionHash('');
+      setShowShare(false);
+      setCopySuccess(false);
+      
+      // Restart the transaction process
+      processRealBlockchainTransaction();
+    } catch (error) {
+      console.error('❌ Retry failed:', error);
+      setError('Failed to retry. Please close and try again.');
+    }
+  };
+
+  // ✅ FIXED: Close Handler
+  const handleClose = () => {
+    try {
+      console.log('📴 Closing blockchain status modal');
+      
+      // Reset all states
+      setStatus('pending');
+      setShowShare(false);
+      setTransactionHash('');
+      setCopySuccess(false);
+      setError(null);
+      setDebugInfo('');
+      
+      // Call parent close handler
+      if (onClose) {
+        onClose();
+      }
+    } catch (error) {
+      console.error('❌ Failed to close modal:', error);
+      // Force close anyway
+      if (onClose) {
+        onClose();
+      }
+    }
   };
 
   if (!isOpen) return null;
@@ -288,10 +353,10 @@ const BlockchainStatusModal = ({
           <div className="absolute bottom-0 right-0 w-24 h-24 bg-pink-500 rounded-full translate-x-12 translate-y-12 animate-pulse delay-1000"></div>
         </div>
 
-        {/* Schließen Button */}
+        {/* ✅ FIXED: Close Button */}
         <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors z-10"
+          onClick={handleClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors z-10 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           <X size={24} />
         </button>
@@ -359,14 +424,14 @@ const BlockchainStatusModal = ({
               )}
             </h3>
             
-          <p className="text-gray-600 dark:text-gray-400 text-sm">
-  {status === 'pending' 
-    ? 'Processing on blockchain...'
-    : status === 'success'
-    ? `${transactionType} successful!`
-    : 'Please connect wallet and try again.'
-  }
-</p>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
+              {status === 'pending' 
+                ? 'Processing on blockchain...'
+                : status === 'success'
+                ? `${transactionType} successful!`
+                : error || 'Please connect wallet and try again.'
+              }
+            </p>
 
             {/* Transaction Details */}
             {status === 'success' && (
@@ -387,7 +452,7 @@ const BlockchainStatusModal = ({
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 dark:text-gray-400">TX Hash:</span>
                     <button
-                      onClick={() => handleShare('copy')}
+                      onClick={() => handleCopyToClipboard(transactionHash)}
                       className="font-mono text-xs text-gray-700 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors"
                       title="Click to copy transaction hash"
                     >
@@ -425,25 +490,33 @@ const BlockchainStatusModal = ({
             </h4>
             
             <div className="grid grid-cols-3 gap-3 mb-6">
+              {/* ✅ UPDATED: X (Twitter) Button */}
               <button
-                onClick={() => handleShare('twitter')}
-                className="flex flex-col items-center p-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors group"
+                onClick={() => handleShare('x')}
+                className="flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-900/20 hover:bg-gray-100 dark:hover:bg-gray-900/30 rounded-lg transition-colors group cursor-pointer"
               >
-                <Twitter className="w-6 h-6 text-blue-500 mb-1 group-hover:scale-110 transition-transform" />
-                <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">Twitter</span>
+                <div className="w-6 h-6 mb-1 group-hover:scale-110 transition-transform flex items-center justify-center">
+                  {/* X Logo SVG */}
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current text-gray-900 dark:text-gray-100">
+                    <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
+                  </svg>
+                </div>
+                <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">X</span>
               </button>
               
+              {/* ✅ UPDATED: LinkedIn Button */}
               <button
-                onClick={() => handleShare('facebook')}
-                className="flex flex-col items-center p-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors group"
+                onClick={() => handleShare('linkedin')}
+                className="flex flex-col items-center p-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors group cursor-pointer"
               >
-                <Facebook className="w-6 h-6 text-blue-600 mb-1 group-hover:scale-110 transition-transform" />
-                <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">Facebook</span>
+                <Linkedin className="w-6 h-6 text-blue-600 mb-1 group-hover:scale-110 transition-transform" />
+                <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">LinkedIn</span>
               </button>
               
+              {/* ✅ UPDATED: Copy Button */}
               <button
                 onClick={() => handleShare('copy')}
-                className="copy-button flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors group"
+                className="copy-button flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors group cursor-pointer"
               >
                 <Copy className="w-6 h-6 text-gray-600 dark:text-gray-400 mb-1 group-hover:scale-110 transition-transform" />
                 <span className={`text-xs font-medium transition-colors ${
@@ -458,19 +531,19 @@ const BlockchainStatusModal = ({
           </div>
         )}
 
-     {/* Action Buttons */}
+        {/* ✅ FIXED: Action Buttons */}
         <div className="flex gap-3">
           {status === 'success' ? (
             <>
               <button
                 onClick={handleViewOnApeScan}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium transition-colors cursor-pointer"
               >
                 View on ApeScan
               </button>
               <button
-                onClick={onClose}
-                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-300"
+                onClick={handleClose}
+                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-300 cursor-pointer"
               >
                 Continue
               </button>
@@ -478,23 +551,23 @@ const BlockchainStatusModal = ({
           ) : status === 'error' ? (
             <>
               <button
-                onClick={onClose}
-                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                onClick={handleClose}
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
               >
                 Close
               </button>
               <button
-                onClick={() => setStatus('pending')}
-                className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+                onClick={handleRetry}
+                className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3 px-4 rounded-lg font-medium transition-colors cursor-pointer"
               >
                 Retry
               </button>
             </>
           ) : (
             <button
-              onClick={onClose}
+              onClick={handleClose}
               disabled={status === 'pending'}
-              className="w-full py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {status === 'pending' ? 'Processing...' : 'Close'}
             </button>
@@ -518,8 +591,7 @@ const BlockchainStatusModal = ({
         .animate-fadeIn {
           animation: fadeIn 0.5s ease-out;
         }
-      `}
-      </style>
+      `}</style>
     </div>
   );
 };
