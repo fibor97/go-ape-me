@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, AlertCircle } from 'lucide-react';
 import { LoadingButton, IPFSUploadStatus } from './LoadingStates';
 import ImageUpload from './ImageUpload';
-import { useBlockchainStatus } from './BlockchainStatusModal';
 
 const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
@@ -10,7 +9,7 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
     description: '',
     target: '',
     category: 'Technology',
-    termsAccepted: false // ✅ NEU: Terms Checkbox
+    termsAccepted: false,
   });
   
   const [selectedImage, setSelectedImage] = useState(null);
@@ -18,9 +17,7 @@ const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
   const [uploadStatus, setUploadStatus] = useState(null);
   const [uploadMessage, setUploadMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState({}); // ✅ NEU: Error Handling
-
-  const { showStatus, StatusModal } = useBlockchainStatus();
+  const [errors, setErrors] = useState({}); // ✅ NEU: Error Handling 
 
 useEffect(() => {
   if (isOpen) {
@@ -92,7 +89,22 @@ useEffect(() => {
       
       // 🚀 NEU: Schließe Create Modal und zeige Status Modal
       handleClose();
-      
+      showBlockchainStatus({
+      transactionType: 'campaign',
+      campaignTitle: formData.title,
+      amount: '0',
+      smartContract: smartContract,
+      campaignData: {
+        ...campaignWithImage,
+        target: parseFloat(formData.target),
+        durationInDays: 30
+      },
+      onTransactionComplete: async (result) => {
+        if (result.success) {
+          await onSubmit(campaignWithImage);
+        }
+      }
+    });
       // Bereite Campaign-Daten vor
       const campaignWithImage = {
         ...formData,
@@ -189,7 +201,7 @@ useEffect(() => {
     }
   };
   
-  if (!isOpen) return <StatusModal />;
+  if (!isOpen) return null;
   
   return (
     <>
@@ -399,7 +411,6 @@ useEffect(() => {
         </div>
       </div>
     </div>
-    <StatusModal />
   </>
   );
 };

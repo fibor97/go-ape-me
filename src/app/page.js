@@ -571,6 +571,8 @@ const handleDonate = async (campaignId, amount) => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateCampaign}
+        showBlockchainStatus={showStatus}    
+        smartContract={smartContract}       
       />
       
       <DonateModal

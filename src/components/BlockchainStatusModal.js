@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader, CheckCircle, Share2, Copy, Clock, Zap, Linkedin } from 'lucide-react';
 
+
+
 const BlockchainStatusModal = ({ 
   isOpen, 
   onClose, 
@@ -19,17 +21,24 @@ const BlockchainStatusModal = ({
   const [copySuccess, setCopySuccess] = useState(false);
   const [error, setError] = useState(null);
   const [debugInfo, setDebugInfo] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // 🔗 ECHTE BLOCKCHAIN INTEGRATION
   useEffect(() => {
-    if (isOpen && status === 'pending') {
-      processRealBlockchainTransaction();
-    }
-  }, [isOpen, status]);
+  if (isOpen && status === 'pending' && !isProcessing) {
+    processRealBlockchainTransaction();
+  }
+}, [isOpen, status, isProcessing]);
 
   const processRealBlockchainTransaction = async () => {
-    try {
-      setDebugInfo('Checking wallet and blockchain connection...');
+  if (isProcessing) {
+    return;
+  }
+  
+  setIsProcessing(true);
+  
+  try {
+    setDebugInfo('Checking wallet and blockchain connection...');
       
       // 🚀 NEU: Verwende Smart Contract von Props
       if (!smartContract) {
@@ -120,6 +129,7 @@ const BlockchainStatusModal = ({
       console.log('✅ Blockchain transaction successful:', result);
       
       setStatus('success');
+      setIsProcessing(false);
       setTransactionHash(result.txHash);
       setShowShare(true);
       setDebugInfo('Transaction confirmed on ApeChain');
@@ -136,6 +146,8 @@ const BlockchainStatusModal = ({
 
     } catch (error) {
       console.error('❌ Blockchain transaction failed:', error);
+
+      
       
       // Handle user cancellation gracefully
       if (error.message === 'CANCELLED_BY_USER' || 
@@ -171,6 +183,7 @@ const BlockchainStatusModal = ({
       }
       
       setStatus('error');
+      setIsProcessing(false);
       setError(userMessage);
       setDebugInfo(`Error: ${error.message}`);
     }
@@ -181,6 +194,7 @@ const BlockchainStatusModal = ({
     if (!isOpen) {
       setStatus('pending');
       setShowShare(false);
+      setIsProcessing(false);
       setTransactionHash('');
       setCopySuccess(false);
       setError(null);
