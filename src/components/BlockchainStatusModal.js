@@ -1,5 +1,5 @@
 // src/components/BlockchainStatusModal.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect , useRef } from 'react';
 import { X, Loader, CheckCircle, Share2, Copy, Clock, Zap, Linkedin } from 'lucide-react';
 
 
@@ -21,14 +21,16 @@ const BlockchainStatusModal = ({
   const [copySuccess, setCopySuccess] = useState(false);
   const [error, setError] = useState(null);
   const [debugInfo, setDebugInfo] = useState('');
+  const transactionStarted = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // 🔗 ECHTE BLOCKCHAIN INTEGRATION
   useEffect(() => {
-  if (isOpen && status === 'pending' && !isProcessing) {
+  if (isOpen && status === 'pending' && !transactionStarted.current) {
+    transactionStarted.current = true;
     processRealBlockchainTransaction();
   }
-}, [isOpen, status, isProcessing]);
+}, [isOpen, status]);
 
   const processRealBlockchainTransaction = async () => {
   if (isProcessing) {
@@ -191,16 +193,16 @@ const BlockchainStatusModal = ({
 
   // Reset beim Schließen
   useEffect(() => {
-    if (!isOpen) {
-      setStatus('pending');
-      setShowShare(false);
-      setIsProcessing(false);
-      setTransactionHash('');
-      setCopySuccess(false);
-      setError(null);
-      setDebugInfo('');
-    }
-  }, [isOpen]);
+  if (!isOpen) {
+    setStatus('pending');
+    setShowShare(false);
+    setTransactionHash('');
+    setCopySuccess(false);
+    setError(null);
+    setDebugInfo('');
+    transactionStarted.current = false;
+  }
+}, [isOpen]);
 
   const shareTexts = {
     donation: `🦍 Gerade ${amount} APE für "${campaignTitle}" auf GoApeMe gespendet! Gemeinsam machen wir einen Unterschied für innovative Projekte. 🌍✨ #GoApeMe #Crowdfunding #ApeChain`,

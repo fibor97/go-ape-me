@@ -3,7 +3,13 @@ import { X, Plus, AlertCircle } from 'lucide-react';
 import { LoadingButton, IPFSUploadStatus } from './LoadingStates';
 import ImageUpload from './ImageUpload';
 
-const CreateCampaignModal = ({ isOpen, onClose, onSubmit }) => {
+const CreateCampaignModal = ({ 
+  isOpen, 
+  onClose, 
+  onSubmit, 
+  showBlockchainStatus, 
+  smartContract 
+}) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -80,79 +86,64 @@ useEffect(() => {
     setUploadMessage('Preparing campaign data...');
     
     try {
-      // Kurze Vorbereitung anzeigen
-      setUploadMessage('Processing image...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setUploadMessage('Connecting to IPFS network...');
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // 🚀 NEU: Schließe Create Modal und zeige Status Modal
-      handleClose();
-      showBlockchainStatus({
-      transactionType: 'campaign',
-      campaignTitle: formData.title,
-      amount: '0',
-      smartContract: smartContract,
-      campaignData: {
-        ...campaignWithImage,
-        target: parseFloat(formData.target),
-        durationInDays: 30
-      },
-      onTransactionComplete: async (result) => {
-        if (result.success) {
-          await onSubmit(campaignWithImage);
-        }
-      }
-    });
-      // Bereite Campaign-Daten vor
-      const campaignWithImage = {
-        ...formData,
+      // IPFS Upload wenn Image vorhanden
+let ipfsCid = '';
+if (imagePreview) {
+  setUploadMessage('Uploading to IPFS...');
+  
+  try {
+    const response = await fetch('/api/upload-campaign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        target: formData.target,
+        creator: 'temp-creator',
         image: imagePreview,
-        hasCustomImage: !!selectedImage && !!imagePreview
-      };
+        hasCustomImage: !!imagePreview
+      })
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      ipfsCid = result.cid;
+      setUploadMessage('Upload successful!');
+    } else {
+      console.error('IPFS upload failed');
+    }
+  } catch (error) {
+    console.error('IPFS upload error:', error);
+  }
+}
+
+// Bereite Campaign-Daten vor
+const campaignWithImage = {
+  ...formData,
+  ipfsCid: ipfsCid,
+  hasCustomImage: !!ipfsCid
+};
       
-      console.log('📸 Campaign with image data:', {
-        hasImage: !!imagePreview,
-        hasCustomImage: campaignWithImage.hasCustomImage,
-        imagePreviewLength: imagePreview ? imagePreview.length : 0
-      });
+      // Schließe Modal und zeige Blockchain Status
+      handleClose();
       
-      // 🚀 NEU: Zeige Blockchain Status Modal
-      showStatus({
+      showBlockchainStatus({
         transactionType: 'campaign',
         campaignTitle: formData.title,
         amount: '0',
+        smartContract: smartContract,
+        campaignData: {
+          ...campaignWithImage,
+          goalInAPE: parseFloat(formData.target), 
+          durationInDays: 30
+        },
         onTransactionComplete: async (result) => {
-          console.log('✅ Blockchain transaction completed, now creating campaign...');
-          
           if (result.success) {
-            try {
-              // Führe die echte Campaign Creation aus
-              await onSubmit(campaignWithImage);
-              console.log('✅ Campaign created successfully with blockchain integration');
-            } catch (campaignError) {
-              console.error('❌ Failed to create campaign after blockchain success:', campaignError);
-              alert('Blockchain transaction successful, but campaign creation failed: ' + campaignError.message);
-            }
-          } else {
-            console.error('❌ Blockchain transaction failed');
+            await onSubmit(campaignWithImage);
           }
         }
-      });
-     
-    // Body Scrolling blockieren
-useEffect(() => {
-  if (isOpen) {
-    document.body.style.overflow = 'hidden';
-  } else {
-    document.body.style.overflow = 'unset';
-  }
-  
-  return () => {
-    document.body.style.overflow = 'unset';
-  };
-}, [isOpen]);  
+      });  
       
     } catch (error) {
       console.error('❌ Failed to start campaign creation process:', error);

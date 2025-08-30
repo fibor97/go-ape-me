@@ -136,7 +136,7 @@ export const useSmartContract = () => {
         campaignData.description,
         campaignData.category || 'Technology',
         ipfsCid,
-        campaignData.target,
+        campaignData.goalInAPE,
         campaignData.durationInDays || 30
       );
 
