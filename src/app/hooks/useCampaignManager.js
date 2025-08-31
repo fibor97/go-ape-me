@@ -189,7 +189,7 @@ if (response.ok) {
       console.error('❌ Failed to create campaign:', error);
       throw error;
     }
-  }, [campaigns, uploadCampaignData, createCampaignOnChain, loadCampaignsFromChain, isConnected, isCorrectNetwork, isClient, saveCampaigns]);
+  }, [campaigns, createCampaignOnChain, loadCampaignsFromChain, isConnected, isCorrectNetwork, isClient, saveCampaigns]);
 
   // Donate to campaign - ALWAYS on Blockchain
   const addDonation = useCallback(async (campaignId, amount) => {

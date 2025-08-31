@@ -6,6 +6,7 @@ import { Heart, X } from 'lucide-react';
 const DonateModal = ({ isOpen, campaign, onClose, onDonate, isConnected, isCorrectNetwork, chainName, smartContract }) => {
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -228,8 +229,31 @@ console.log('✅ Donation completed successfully');
             </div>
           </div>
         )}
-
+ {/* Donation Terms */}
+<div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 mb-4">
+  <div className="flex items-start gap-3">
+    <input
+      type="checkbox"
+      id="donationTerms"
+      checked={termsAccepted}
+      onChange={(e) => setTermsAccepted(e.target.checked)}
+      className="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+    />
+    <div className="flex-1">
+      <label htmlFor="donationTerms" className="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer">
+        I understand the donation terms *
+      </label>
+      <div className="mt-2 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+        <p>• If campaign fails: 95% refund claimable automatically</p>
+        <p>• If campaign succeeds: Funds go to creator (5% platform fee)</p>
+        <p>• All donations held in smart contract escrow</p>
+        <p>• No reversals after successful campaign completion</p>
+      </div>
+    </div>
+  </div>
+</div>
         <div className="flex gap-3">
+         
           <button
             onClick={onClose}
             disabled={isProcessing}
@@ -239,7 +263,7 @@ console.log('✅ Donation completed successfully');
           </button>
           <button
             onClick={handleDonate}
-            disabled={!amount || parseFloat(amount) <= 0 || isProcessing || remainingToGoal <= 0 || parseFloat(amount) > maxDonation}
+            disabled={!amount || parseFloat(amount) <= 0 || isProcessing || remainingToGoal <= 0 || parseFloat(amount) > maxDonation || !termsAccepted}
             className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isProcessing ? (
