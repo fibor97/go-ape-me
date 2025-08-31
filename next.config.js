@@ -28,7 +28,7 @@ const nextConfig = {
   },
 
   // React Strict Mode
-  reactStrictMode: true,
+  reactStrictMode: false,
 };
 
 module.exports = nextConfig;

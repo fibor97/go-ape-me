@@ -73,12 +73,16 @@ const CreatorCampaignRow = ({ campaign, onWithdraw, onAbort, onEdit }) => {
           <div className="flex items-center gap-3 mb-2">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{campaign.title}</h3>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-              status.status === 'completed' 
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                : status.status === 'expired'
-                ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-            }`}>
+  status.status === 'completed' 
+    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+    : status.status === 'withdrawn'
+    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+    : status.status === 'active'
+    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+    : status.status === 'expired'
+    ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+    : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'  // Fallback
+}`}>
               {status.label}
             </span>
           </div>

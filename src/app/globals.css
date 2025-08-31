@@ -1,11 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #101929;
   --foreground: #171717;
 }
-
-/* ENTFERNT: @media (prefers-color-scheme: dark) - das war das Problem! */
 
 /* Manual Dark Mode via class */
 .dark {

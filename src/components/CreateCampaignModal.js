@@ -231,9 +231,9 @@ const campaignWithImage = {
               currentImage={imagePreview}
               disabled={isSubmitting}
             />
-            {/* ✅ NEU: 2MB File Size Notice */}
+            {/* ✅ NEU: 5MB File Size Notice */}
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              📁 Maximum file size: 2MB | Supported formats: PNG, JPG, GIF
+              📁 Maximum file size: 5MB | Supported formats: PNG, JPG, GIF
             </p>
           </div>
           
