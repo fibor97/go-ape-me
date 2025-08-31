@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useStoracha } from './useStoracha';
 import { useSmartContract } from './useSmartContract';
 
 const CAMPAIGNS_STORAGE_KEY = 'go-ape-me-campaigns';
@@ -7,7 +6,6 @@ const CAMPAIGNS_STORAGE_KEY = 'go-ape-me-campaigns';
 export const useCampaignManager = () => {
   const [campaigns, setCampaigns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { uploadCampaignData } = useStoracha();
   const { 
     createCampaignOnChain, 
     donateToChain, 
@@ -117,7 +115,16 @@ console.log('🖼️ Has custom image?', campaignData.hasCustomImage);
 console.log('🖼️ Image data length:', campaignData.image?.length || 0);
 console.log('🖼️ Image starts with:', campaignData.image?.substring(0, 50) || 'No image');
 
-ipfsResult = await uploadCampaignData(metadataToUpload);
+const response = await fetch('/api/upload-campaign', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(metadataToUpload)
+});
+
+if (response.ok) {
+  ipfsResult = await response.json();
+  console.log('✅ IPFS Upload successful:', ipfsResult.cid);
+}
         console.log('✅ IPFS Upload successful:', ipfsResult.cid);
       } catch (ipfsError) {
         console.warn('⚠️ IPFS upload failed, continuing without metadata:', ipfsError.message);
