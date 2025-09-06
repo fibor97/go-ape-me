@@ -24,6 +24,24 @@ import { useWalletConnection } from '../hooks/useWalletConnection';
 import { useCampaignManager } from '../hooks/useCampaignManager';
 import { getCampaignStatus } from '../hooks/useCampaignManager';
 import WalletModal from '../../components/WalletModal';
+import { useSmartContract } from '../hooks/useSmartContract';
+
+// Helper: Check if campaign can be marked as failed
+const canMarkAsFailed = (campaign) => {
+  const now = new Date();
+  const deadline = new Date(campaign.deadline);
+  const isExpired = now > deadline;
+  const goalNotReached = campaign.raised < campaign.target;
+  const isActive = getCampaignStatus(campaign).status === 'active';
+  
+  return isExpired && goalNotReached && isActive;
+};
+
+// Helper: Check if refund is possible
+const isRefundEligible = (campaign) => {
+  const status = getCampaignStatus(campaign).status;
+  return status === 'expired' || status === 'failed';
+};
 
 // Stats Card Component
 const StatsCard = ({ title, value, icon: Icon, trend, color = "purple", subtitle }) => {
@@ -198,6 +216,11 @@ const DonationRow = ({ campaign, donationAmount, onRefund, onReDonate }) => {
   const status = getCampaignStatus(campaign);
   const progress = campaign.target > 0 ? (campaign.raised / campaign.target) * 100 : 0;
   
+  // Check different refund states
+  const canMarkFailed = canMarkAsFailed(campaign);
+  const isRefundEligible = status.status === 'expired' && campaign.raised < campaign.target;
+  const isCompleted = status.status === 'completed' || status.status === 'withdrawn';
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg p-5 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between mb-3">
@@ -205,9 +228,9 @@ const DonationRow = ({ campaign, donationAmount, onRefund, onReDonate }) => {
           <div className="flex items-center gap-2 mb-1">
             <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100">{campaign.title}</h3>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-              status.status === 'completed' 
+              isCompleted
                 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                : status.status === 'expired'
+                : isRefundEligible
                 ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                 : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
             }`}>
@@ -228,12 +251,12 @@ const DonationRow = ({ campaign, donationAmount, onRefund, onReDonate }) => {
       <div className="mb-3">
         <div className="flex justify-between text-sm mb-1">
           <span className="text-gray-600 dark:text-gray-400">Campaign Progress</span>
-          <span className="font-medium">{progress.toFixed(1)}%</span>
+          <span className="font-medium text-white">{progress.toFixed(1)}%</span>
         </div>
         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
           <div 
             className={`h-2 rounded-full ${
-              status.status === 'completed' 
+              isCompleted
                 ? 'bg-gradient-to-r from-green-400 to-green-600' 
                 : 'bg-gradient-to-r from-purple-500 to-pink-500'
             }`}
@@ -243,34 +266,96 @@ const DonationRow = ({ campaign, donationAmount, onRefund, onReDonate }) => {
       </div>
 
       <div className="flex gap-2">
-        {status.status === 'completed' && (
-          <div className="flex-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-center">
-            <div className="text-green-800 dark:text-green-200 text-sm font-medium">
-              🎉 Successfully Funded!
-            </div>
-          </div>
-        )}
-        
-        {status.status === 'expired' && campaign.raised < campaign.target && (
-          <button
-            onClick={() => onRefund(campaign, donationAmount)}
-            className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Claim Refund (95%)
-          </button>
-        )}
-        
-        {status.status === 'active' && (
-          <button
-            onClick={() => onReDonate(campaign)}
-            className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center justify-center gap-2"
-          >
-            <Heart className="w-4 h-4" />
-            Donate More
-          </button>
-        )}
+  {isCompleted && (
+    <div className="flex-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-center">
+      <div className="text-green-800 dark:text-green-200 text-sm font-medium">
+        🎉 Successfully Funded!
       </div>
+    </div>
+  )}
+  
+  {/* Campaign expired but needs marking as failed */}
+  {canMarkFailed && (
+    <button
+      onClick={() => onRefund(campaign, parseFloat(donationAmount))}
+      className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+    >
+      <AlertCircle className="w-4 h-4" />
+      Mark Failed & Refund
+    </button>
+  )}
+  
+  {/* Normal refund (already marked as failed) */}
+  {isRefundEligible && !canMarkFailed && (
+    <button
+      onClick={() => onRefund(campaign, parseFloat(donationAmount))}
+      className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+    >
+      <ArrowLeft className="w-4 h-4" />
+      Claim Refund (95%)
+    </button>
+  )}
+  
+  {/* Active campaign - donate more */}
+  {status.status === 'active' && (
+    <button
+      onClick={() => onReDonate(campaign)}
+      className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center justify-center gap-2"
+    >
+      <Heart className="w-4 h-4" />
+      Donate More
+    </button>
+  )}
+</div>
+    </div>
+  );
+};
+
+const CampaignFilter = () => {
+  const filterOptions = [
+    { value: 'all', label: 'All Campaigns', icon: '📊' },
+    { value: 'active', label: 'Active', icon: '🚀' },
+    { value: 'completed', label: 'Completed', icon: '✅' },
+    { value: 'expired', label: 'Expired', icon: '⏰' }
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-2 mb-6">
+      {filterOptions.map(option => {
+        const isActive = campaignFilter === option.value;
+        const count = option.value === 'all' 
+          ? campaigns.filter(c => c.creator?.toLowerCase() === address?.toLowerCase()).length
+          : campaigns.filter(c => 
+              c.creator?.toLowerCase() === address?.toLowerCase() && 
+              getCampaignStatus(c).status === option.value
+            ).length;
+        
+        return (
+          <button
+            key={option.value}
+            onClick={() => setCampaignFilter(option.value)}
+            className={`
+              px-4 py-2 rounded-lg font-medium transition-all duration-300 flex items-center gap-2
+              ${isActive 
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600'
+              }
+            `}
+          >
+            <span>{option.icon}</span>
+            <span>{option.label}</span>
+            <span className={`
+              px-2 py-1 rounded-full text-xs font-bold
+              ${isActive 
+                ? 'bg-white/20 text-white' 
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+              }
+            `}>
+              {count}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 };
@@ -278,85 +363,60 @@ const DonationRow = ({ campaign, donationAmount, onRefund, onReDonate }) => {
 export default function CreatorDashboard() {
   const router = useRouter();
   const { isConnected, address, connect, disconnect, formattedAddress, chainName, isCorrectNetwork } = useWalletConnection();
-const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const { campaigns, statistics , withdrawCampaignFunds } = useCampaignManager();
+  const smartContract = useSmartContract();
+  const [campaignFilter, setCampaignFilter] = useState('all');
   
   // Filter campaigns and donations by current user
-  const myCampaigns = campaigns.filter(campaign => 
+// Ersetze die bestehende myCampaigns Definition
+const myCampaigns = campaigns
+  .filter(campaign => 
     campaign.creator && campaign.creator.toLowerCase() === address?.toLowerCase()
-  );
+  )
+  .filter(campaign => {
+    if (campaignFilter === 'all') return true;
+    const status = getCampaignStatus(campaign).status;
+    return status === campaignFilter;
+  })
+  .sort((a, b) => {
+    const dateA = new Date(a.createdAt || 0);
+    const dateB = new Date(b.createdAt || 0);
+    return dateB - dateA;
+  });
 
-  // Real donation data - 5 campaigns with 5 APE each
-const realDonations = [
-  {
-    id: 'donation_1',
-    title: 'Ocean Cleanup Initiative',
-    category: 'Environment',
-    description: 'Revolutionary technology to clean plastic from oceans',
-    raised: 127.5,
-    target: 150,
-    deadline: '2025-08-15',
-    donorCount: 23,
-    creator: '0x1234567890abcdef',
-    createdAt: '2024-12-01T10:00:00Z',
-    image: '/ocean_cleanup.jpg'
-  },
-  {
-    id: 'donation_2', 
-    title: 'AI Education Platform',
-    category: 'Education',
-    description: 'Democratizing AI education for developing countries',
-    raised: 89.2,
-    target: 100,
-    deadline: '2025-07-20',
-    donorCount: 31,
-    creator: '0xabcdef1234567890',
-    createdAt: '2024-11-15T14:30:00Z',
-    image: '/ai_education.jpg'
-  },
-  {
-    id: 'donation_3',
-    title: 'Green Energy Storage',
-    category: 'Technology', 
-    description: 'Next-generation battery technology for renewable energy',
-    raised: 45.8,
-    target: 200,
-    deadline: '2025-09-10',
-    donorCount: 18,
-    creator: '0xfedcba0987654321',
-    createdAt: '2024-10-20T09:15:00Z',
-    image: '/green_energy.jpg'
-  },
-  {
-    id: 'donation_4',
-    title: 'Digital Art Museum',
-    category: 'Art',
-    description: 'Virtual reality museum showcasing digital art',
-    raised: 156.7,
-    target: 180,
-    deadline: '2025-06-30',
-    donorCount: 42,
-    creator: '0x9876543210fedcba',
-    createdAt: '2024-09-05T16:45:00Z',
-    image: '/digital_art.jpg'
-  },
-  {
-    id: 'donation_5',
-    title: 'Community Garden Network',
-    category: 'Social',
-    description: 'Building sustainable community gardens in urban areas',
-    raised: 78.3,
-    target: 120,
-    deadline: '2025-08-01',
-    donorCount: 67,
-    creator: '0x5432109876fedcba',
-    createdAt: '2024-08-12T11:20:00Z',
-    image: '/community_garden.jpg'
-  }
-];
 
-const myDonations = realDonations;
+const [myDonations, setMyDonations] = useState([]);
+const [donationAmounts, setDonationAmounts] = useState({});
 
+
+// Load real donation data
+useEffect(() => {
+  const loadDonationData = async () => {
+    if (!address || !smartContract.isClient) return;
+    
+    try {
+      // Get campaigns where user has donated
+      const donatedCampaigns = campaigns.filter(campaign => {
+        return campaign.donorCount > 0; // Placeholder logic
+      });
+      
+      setMyDonations(donatedCampaigns);
+      
+      // Set donation amounts (in production, get from smart contract)
+      const amounts = {};
+      donatedCampaigns.forEach(campaign => {
+        amounts[campaign.id] = 5.0; // Placeholder - get real amount from contract
+      });
+      setDonationAmounts(amounts);
+      
+    } catch (error) {
+      console.error('Failed to load donation data:', error);
+    }
+  };
+  
+  loadDonationData();
+}, [address, campaigns, smartContract.isClient]);
   // Calculate creator-specific stats
   const creatorStats = {
     totalCampaigns: myCampaigns.length,
@@ -370,9 +430,9 @@ const myDonations = realDonations;
   };
 
   // Calculate backer-specific stats
-  const backerStats = {
+const backerStats = {
   totalDonations: myDonations.length,
-  totalDonated: myDonations.length * 5.0, // 5 APE per donation = 25 APE total
+  totalDonated: Object.values(donationAmounts).reduce((sum, amount) => sum + amount, 0),
   successfullyFunded: myDonations.filter(c => getCampaignStatus(c).status === 'completed').length,
   activeDonations: myDonations.filter(c => getCampaignStatus(c).status === 'active').length
 };
@@ -382,16 +442,46 @@ const myDonations = realDonations;
   try {
     console.log('💰 Withdrawing funds for:', campaign.title);
     
-    const result = await withdrawCampaignFunds(campaign.blockchainId || campaign.id);
+    if (!smartContract.isConnected || !smartContract.isCorrectNetwork) {
+      alert('Please connect to ApeChain to withdraw funds');
+      return;
+    }
     
-    alert(`✅ Withdrawal successful! 
-95% (${(campaign.raised * 0.95).toFixed(2)} APE) sent to your wallet
-5% (${(campaign.raised * 0.05).toFixed(2)} APE) platform fee
+    const confirmMessage = `Withdraw funds from "${campaign.title}"?
+    
+Total Raised: ${campaign.raised.toFixed(2)} APE
+Your Share: ${(campaign.raised * 0.95).toFixed(2)} APE (95%)
+Platform Fee: ${(campaign.raised * 0.05).toFixed(2)} APE (5%)
+    
+This will transfer the funds to your wallet.`;
+
+    if (!confirm(confirmMessage)) return;
+    
+    const { withdrawFunds } = smartContract;
+    const blockchainCampaignId = campaign.blockchainId || campaign.id;
+    
+    const result = await withdrawFunds(blockchainCampaignId);
+    
+    alert(`✅ Withdrawal successful!
+${(campaign.raised * 0.95).toFixed(2)} APE sent to your wallet
 Transaction: ${result.txHash}`);
+    
+    // Refresh data
+    window.location.reload();
     
   } catch (error) {
     console.error('❌ Withdrawal failed:', error);
-    alert('Withdrawal failed: ' + error.message);
+    
+    let errorMessage = error.message;
+    if (error.message?.includes('Only creator allowed')) {
+      errorMessage = 'Only the campaign creator can withdraw funds';
+    } else if (error.message?.includes('Campaign not successful')) {
+      errorMessage = 'Campaign must reach its goal before withdrawal';
+    } else if (error.code === 4001) {
+      errorMessage = 'Transaction cancelled by user';
+    }
+    
+    alert('Withdrawal failed: ' + errorMessage);
   }
 };
 
@@ -405,19 +495,127 @@ Transaction: ${result.txHash}`);
     // TODO: Implement edit functionality
   };
 
-  const handleRefund = (campaign, amount) => {
-    console.log('Claim refund for:', campaign.title, amount);
-    // TODO: Implement refund functionality
-  };
-
-  const handleReDonate = (campaign) => {
-    console.log('Re-donate to:', campaign.title);
-    // TODO: Implement re-donate functionality
-  };
-
   const handleBackToHome = () => {
-    router.push('/');
-  };
+  router.push('/');
+};
+
+const handleReDonate = (campaign) => {
+  console.log('💰 Re-donating to campaign:', campaign.title);
+  router.push(`/?campaign=${campaign.id}`);
+};
+
+const handleRefund = async (campaign, amount) => {
+  try {
+    console.log('💰 Starting refund process for:', campaign.title);
+    
+    if (!smartContract.isConnected || !smartContract.isCorrectNetwork) {
+      alert('Please connect to ApeChain to claim refunds');
+      return;
+    }
+    
+    // 🔍 Check current campaign status
+    const status = getCampaignStatus(campaign).status;
+    const blockchainCampaignId = campaign.blockchainId || campaign.id;
+    
+    // 🚨 If campaign is still "active" but expired, mark it as failed first
+    if (canMarkAsFailed(campaign)) {
+      const shouldMark = confirm(`Campaign "${campaign.title}" has expired but needs to be marked as failed first.
+      
+This will update the campaign status to allow refunds.
+Proceed with marking as failed?`);
+      
+      if (!shouldMark) return;
+      
+      try {
+        console.log('⏰ Marking campaign as failed first...');
+        const { markCampaignFailed } = smartContract;
+        await markCampaignFailed(blockchainCampaignId);
+        
+        alert('✅ Campaign marked as failed! You can now claim your refund.');
+        window.location.reload();
+        return;
+        
+      } catch (markError) {
+        console.error('❌ Failed to mark campaign as failed:', markError);
+        alert('Failed to mark campaign as failed: ' + markError.message);
+        return;
+      }
+    }
+    
+    // 🔍 Check if refund is eligible
+    if (!isRefundEligible(campaign)) {
+      alert('❌ Refunds are only available for failed/expired campaigns');
+      return;
+    }
+    
+    // 💰 Get refundable amount from smart contract
+    const { getRefundableAmount, claimRefund } = smartContract;
+    
+    let refundInfo;
+    try {
+      refundInfo = await getRefundableAmount(blockchainCampaignId, address);
+    } catch (error) {
+      console.error('Failed to get refundable amount:', error);
+      alert('Failed to check refund amount. Campaign might not be marked as failed yet.');
+      return;
+    }
+    
+    if (!refundInfo || refundInfo.refundAmountAPE === 0) {
+      alert('❌ No refund available for this campaign');
+      return;
+    }
+    
+    // 💡 Show refund confirmation
+    const confirmMessage = `Claim refund for "${campaign.title}"?
+    
+Your Donation: ${amount} APE
+Refund Amount: ${refundInfo.refundAmountAPE.toFixed(3)} APE (95%)
+Platform Fee: ${refundInfo.platformFeeAPE.toFixed(3)} APE (5%)
+    
+This will send the refund to your wallet.`;
+
+    if (!confirm(confirmMessage)) return;
+    
+    // 🚀 Execute refund claim
+    const result = await claimRefund(blockchainCampaignId);
+    
+    alert(`🎉 Refund claimed successfully!
+${refundInfo.refundAmountAPE.toFixed(3)} APE sent to your wallet
+Transaction: ${result.txHash}`);
+    
+    // Refresh data
+    window.location.reload();
+    
+  } catch (error) {
+    console.error('❌ Refund process failed:', error);
+    
+    let errorMessage = error.message;
+    if (error.message?.includes('No donation found')) {
+      errorMessage = 'No donation found for this campaign';
+    } else if (error.message?.includes('Campaign not failed')) {
+      errorMessage = 'Campaign must be marked as failed before refunds';
+    } else if (error.code === 4001) {
+      errorMessage = 'Transaction cancelled by user';
+    }
+    
+    alert('Refund failed: ' + errorMessage);
+  }
+};
+
+// 🚀 ALTERNATIVE: Temporärer Refund Handler (falls Smart Contract noch nicht ready)
+const handleRefundTemp = async (campaign, amount) => {
+  const refundAmount = (amount * 0.95).toFixed(3);
+  
+  const message = `🚧 Refund Feature Coming Soon!
+  
+Campaign: ${campaign.title}
+Your Donation: ${amount} APE
+Refund Amount: ${refundAmount} APE (95%)
+
+This feature will be available once the smart contract refund logic is fully implemented.`;
+  
+  alert(message);
+};
 
   // Redirect if not connected
   if (!isConnected) {
@@ -531,14 +729,57 @@ Transaction: ${result.txHash}`);
           </p>
         </div>
 
-        {/* CREATOR SECTION */}
-        <div className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              🚀 Your Campaigns ({myCampaigns.length})
-            </h3>
-          </div>
-
+{/* CREATOR SECTION */}
+<div className="mb-12">
+  <div className="flex items-center justify-between mb-4">
+    <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+      🚀 Your Campaigns ({myCampaigns.length})
+    </h3>
+  </div>
+  
+  {/* 🎯 FILTER BUTTONS - HIER EINFÜGEN */}
+  <div className="flex flex-wrap gap-2 mb-6">
+    {[
+      { value: 'all', label: 'All Campaigns', icon: '📊' },
+      { value: 'active', label: 'Active', icon: '🚀' },
+      { value: 'completed', label: 'Completed', icon: '✅' },
+      { value: 'expired', label: 'Expired', icon: '⏰' }
+    ].map(option => {
+      const isActive = campaignFilter === option.value;
+      const count = option.value === 'all' 
+        ? campaigns.filter(c => c.creator?.toLowerCase() === address?.toLowerCase()).length
+        : campaigns.filter(c => 
+            c.creator?.toLowerCase() === address?.toLowerCase() && 
+            getCampaignStatus(c).status === option.value
+          ).length;
+      
+      return (
+        <button
+          key={option.value}
+          onClick={() => setCampaignFilter(option.value)}
+          className={`
+            px-4 py-2 rounded-lg font-medium transition-all duration-300 flex items-center gap-2
+            ${isActive 
+              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600'
+            }
+          `}
+        >
+          <span>{option.icon}</span>
+          <span>{option.label}</span>
+          <span className={`
+            px-2 py-1 rounded-full text-xs font-bold
+            ${isActive 
+              ? 'bg-white/20 text-white' 
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+            }
+          `}>
+            {count}
+          </span>
+        </button>
+      );
+    })}
+  </div>
           {/* Creator Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <StatsCard
@@ -657,11 +898,11 @@ Transaction: ${result.txHash}`);
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {myDonations.map((campaign, index) => (
+              {myDonations.map((campaign) => (
   <DonationRow
     key={`${campaign.id}-donation`}
     campaign={campaign}
-    donationAmount="5.0" // 5 APE per donation
+    donationAmount={donationAmounts[campaign.id]?.toFixed(1) || '0.0'}
     onRefund={handleRefund}
     onReDonate={handleReDonate}
   />
@@ -673,42 +914,53 @@ Transaction: ${result.txHash}`);
         
       </main>
       
-      {/* Minimal Footer */}
-      <footer className="bg-gray-900 border-t border-gray-800 py-3 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col space-y-2 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 text-sm text-gray-400">
-            {/* Left Side - Creator */}
-            <div className="flex items-center justify-center sm:justify-start gap-2">
-              <span>Made by</span>
-              <a 
-                href="https://x.com/fibordoteth" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-white hover:text-gray-300 font-medium transition-colors"
-              >
-                Fibor
-              </a>
-            </div>
-            
-            {/* Right Side - Powered by ApeChain */}
-            <div className="flex items-center justify-center sm:justify-end gap-2">
-              <span>Powered by</span>
-              <a 
-                href="https://apechain.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:opacity-80 transition-opacity"
-              >
-                <img 
-                  src="/apechain_logo.png" 
-                  alt="ApeChain" 
-                  className="h-6 w-auto object-contain hover:scale-105 transition-transform"
-                />
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+{/* Minimal Footer */}
+<footer className="bg-gray-900 border-t border-gray-800 py-3 px-4">
+  <div className="max-w-7xl mx-auto">
+    <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 text-sm text-gray-400">
+      
+      {/* Left Side - Creator */}
+      <div className="flex items-center justify-center sm:justify-start gap-2">
+        <span>Made by</span>
+        <a 
+          href="https://x.com/fibordoteth" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-white hover:text-gray-300 font-medium transition-colors"
+        >
+          Fibor
+        </a>
+      </div>
+      
+      {/* Center - Navigation Links */}
+      <div className="flex items-center justify-center gap-6">
+        <button
+          onClick={() => router.push('/roadmap')}
+          className="text-gray-400 hover:text-white text-sm transition-colors uppercase tracking-wide"
+        >
+          ROADMAP
+        </button>
+      </div>
+      
+      {/* Right Side - Powered by ApeChain */}
+      <div className="flex items-center justify-center sm:justify-end gap-2">
+        <span>Powered by</span>
+        <a 
+          href="https://apechain.com" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="hover:opacity-80 transition-opacity"
+        >
+          <img 
+            src="/apechain_logo.png" 
+            alt="ApeChain" 
+            className="h-6 w-auto object-contain hover:scale-105 transition-transform"
+          />
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
       
       {/* Wallet Modal - FEHLT IM DASHBOARD */}
       <WalletModal

@@ -15,8 +15,12 @@ const CONTRACT_ABI = [
   "function getAllCampaigns() external view returns (tuple(uint256 id, address creator, string title, string description, string category, string ipfsCid, uint256 goal, uint256 raised, uint256 deadline, uint8 status, uint256 createdAt, uint256 donorCount)[])",
   "function getContractStats() external view returns (uint256 totalCampaigns, uint256 activeCampaigns, uint256 successfulCampaigns, uint256 totalEscrowAmount, uint256 platformFeesAccumulated)",
   "function campaignCounter() external view returns (uint256)",
+  "function getRefundableAmount(uint256 _campaignId, address _donor) external view returns (uint256 refundAmount, uint256 platformFee)",
+  "function claimRefund(uint256 _campaignId) external",
+  "function markCampaignFailed(uint256 _campaignId) external",
   "event CampaignCreated(uint256 indexed campaignId, address indexed creator, string title, uint256 goal, uint256 deadline)",
-  "event DonationMade(uint256 indexed campaignId, address indexed donor, uint256 amount, uint256 newTotal)"
+  "event DonationMade(uint256 indexed campaignId, address indexed donor, uint256 amount, uint256 newTotal)",
+  "event RefundClaimed(uint256 indexed campaignId, address indexed donor, uint256 refundAmount, uint256 platformFee)"
 ];
 
 // Campaign Status Enum
@@ -286,6 +290,137 @@ const withdrawFunds = useCallback(async (campaignId) => {
   }
 }, [ethers, isClient, isConnected, isCorrectNetwork, getWriteContract]);
 
+// 🔧 FÜGE DIESEN CODE NACH der withdrawFunds Funktion ein:
+
+// Get refundable amount for a user
+const getRefundableAmount = useCallback(async (campaignId, userAddress) => {
+  if (!ethers || !isClient) {
+    throw new Error('Blockchain dependencies not loaded');
+  }
+
+  try {
+    const contract = getReadContract();
+    if (!contract) throw new Error('Could not get contract instance');
+
+    console.log('🔍 Checking refundable amount for:', campaignId, userAddress);
+
+    const result = await contract.getRefundableAmount(campaignId, userAddress);
+    
+    return {
+      refundAmount: result.refundAmount.toString(),
+      platformFee: result.platformFee.toString(),
+      refundAmountAPE: parseFloat(ethers.formatEther(result.refundAmount)),
+      platformFeeAPE: parseFloat(ethers.formatEther(result.platformFee))
+    };
+
+  } catch (error) {
+    console.error('❌ Failed to get refundable amount:', error);
+    throw error;
+  }
+}, [ethers, isClient, getReadContract]);
+
+// Claim refund from failed campaign
+const claimRefund = useCallback(async (campaignId) => {
+  if (!ethers || !isClient) {
+    throw new Error('Blockchain dependencies not loaded');
+  }
+
+  setIsLoading(true);
+  setError(null);
+
+  try {
+    if (!isConnected) throw new Error('Wallet not connected');
+    if (!isCorrectNetwork) throw new Error('Please switch to ApeChain');
+
+    const contract = await getWriteContract();
+    if (!contract) throw new Error('Could not get contract instance');
+
+    console.log('💰 Claiming refund for campaign:', campaignId);
+
+    const tx = await contract.claimRefund(campaignId);
+    console.log('⏳ Refund transaction sent:', tx.hash);
+
+    const receipt = await tx.wait();
+    console.log('✅ Refund confirmed:', receipt);
+
+    return {
+      success: true,
+      txHash: tx.hash,
+      blockNumber: receipt.blockNumber,
+      gasUsed: receipt.gasUsed.toString()
+    };
+
+  } catch (error) {
+    console.error('❌ Refund claim failed:', error);
+    
+    let userMessage = error.message;
+    
+    if (error.code === 4001) {
+      throw new Error('CANCELLED_BY_USER');
+    } else if (error.message?.includes('No donation found')) {
+      userMessage = 'No donation found for this campaign';
+    } else if (error.message?.includes('Campaign not failed')) {
+      userMessage = 'Campaign must be marked as failed before refunds';
+    }
+    
+    setError(userMessage);
+    throw error;
+  } finally {
+    setIsLoading(false);
+  }
+}, [ethers, isClient, isConnected, isCorrectNetwork, getWriteContract]);
+
+// Mark campaign as failed
+const markCampaignFailed = useCallback(async (campaignId) => {
+  if (!ethers || !isClient) {
+    throw new Error('Blockchain dependencies not loaded');
+  }
+
+  setIsLoading(true);
+  setError(null);
+
+  try {
+    if (!isConnected) throw new Error('Wallet not connected');
+    if (!isCorrectNetwork) throw new Error('Please switch to ApeChain');
+
+    const contract = await getWriteContract();
+    if (!contract) throw new Error('Could not get contract instance');
+
+    console.log('⏰ Marking campaign as failed:', campaignId);
+
+    const tx = await contract.markCampaignFailed(campaignId);
+    console.log('⏳ Mark failed transaction sent:', tx.hash);
+
+    const receipt = await tx.wait();
+    console.log('✅ Campaign marked as failed:', receipt);
+
+    return {
+      success: true,
+      txHash: tx.hash,
+      blockNumber: receipt.blockNumber,
+      gasUsed: receipt.gasUsed.toString()
+    };
+
+  } catch (error) {
+    console.error('❌ Mark failed transaction failed:', error);
+    
+    let userMessage = error.message;
+    
+    if (error.code === 4001) {
+      throw new Error('CANCELLED_BY_USER');
+    } else if (error.message?.includes('Campaign not ended')) {
+      userMessage = 'Campaign deadline has not passed yet';
+    } else if (error.message?.includes('Campaign reached goal')) {
+      userMessage = 'Campaign was successful, cannot mark as failed';
+    }
+    
+    setError(userMessage);
+    throw error;
+  } finally {
+    setIsLoading(false);
+  }
+}, [ethers, isClient, isConnected, isCorrectNetwork, getWriteContract]);
+
   // Load all campaigns from blockchain with IPFS data
   const loadCampaignsFromChain = useCallback(async () => {
     if (!ethers || !isClient) {
@@ -490,6 +625,9 @@ const withdrawFunds = useCallback(async (campaignId) => {
     createCampaignOnChain: isClient ? createCampaignOnChain : async () => { throw new Error('Blockchain not available server-side'); },
     donateToChain: isClient ? donateToChain : async () => { throw new Error('Blockchain not available server-side'); },
     withdrawFunds: isClient ? withdrawFunds : async () => { throw new Error('Blockchain not available server-side'); },
+    getRefundableAmount: isClient ? getRefundableAmount : async () => { throw new Error('Blockchain not available server-side'); },
+    claimRefund: isClient ? claimRefund : async () => { throw new Error('Blockchain not available server-side'); },
+    markCampaignFailed: isClient ? markCampaignFailed : async () => { throw new Error('Blockchain not available server-side'); },
     loadCampaignsFromChain: isClient ? loadCampaignsFromChain : async () => [],
     getContractStats: isClient ? getContractStats : async () => null,
     

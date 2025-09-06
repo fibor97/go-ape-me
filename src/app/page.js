@@ -534,43 +534,53 @@ const handleDonate = async (campaignId, amount) => {
   </div>
 </section>
       
-     {/* Minimal Footer */}
-      <footer className="bg-gray-900 border-t border-gray-800 py-3 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col space-y-2 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 text-sm text-gray-400">
-            {/* Left Side - Creator */}
-            <div className="flex items-center justify-center sm:justify-start gap-2">
-              <span>Made by</span>
-              <a 
-                href="https://x.com/fibordoteth" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-white hover:text-gray-300 font-medium transition-colors"
-              >
-                Fibor
-              </a>
-            </div>
-            
-            {/* Right Side - Powered by ApeChain */}
-            <div className="flex items-center justify-center sm:justify-end gap-2">
-              <span>Powered by</span>
-              <a 
-                href="https://apechain.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:opacity-80 transition-opacity"
-              >
-                {/* ApeChain Logo - kleiner */}
-                <img 
-                  src="/apechain_logo.png" 
-                  alt="ApeChain" 
-                  className="h-6 w-auto object-contain hover:scale-105 transition-transform"
-                />
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+    {/* Minimal Footer */}
+<footer className="bg-gray-900 border-t border-gray-800 py-3 px-4">
+  <div className="max-w-7xl mx-auto">
+    <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 text-sm text-gray-400">
+      
+      {/* Left Side - Creator */}
+      <div className="flex items-center justify-center sm:justify-start gap-2">
+        <span>Made by</span>
+        <a 
+          href="https://x.com/fibordoteth" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-white hover:text-gray-300 font-medium transition-colors"
+        >
+          Fibor
+        </a>
+      </div>
+      
+      {/* Center - Navigation Links */}
+      <div className="flex items-center justify-center gap-6">
+        <button
+          onClick={() => router.push('/roadmap')}
+          className="text-gray-400 hover:text-white text-sm transition-colors uppercase tracking-wide"
+        >
+          ROADMAP
+        </button>
+      </div>
+      
+      {/* Right Side - Powered by ApeChain */}
+      <div className="flex items-center justify-center sm:justify-end gap-2">
+        <span>Powered by</span>
+        <a 
+          href="https://apechain.com" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="hover:opacity-80 transition-opacity"
+        >
+          <img 
+            src="/apechain_logo.png" 
+            alt="ApeChain" 
+            className="h-6 w-auto object-contain hover:scale-105 transition-transform"
+          />
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
       
       {/* Modals */}
       <CreateCampaignModal 
