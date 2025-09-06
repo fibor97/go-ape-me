@@ -97,14 +97,16 @@ const [celebrationCampaign, setCelebrationCampaign] = useState(null);
   };
   
 const handleDonate = async (campaignId, amount) => {
+  if (handleDonate._isRunning) {
+    console.log('🚫 handleDonate already running, ignoring call');
+    return;
+  }
+  handleDonate._isRunning = true;
+
   try {
     console.log('🎯 handleDonate called with:', { campaignId, amount });
     
-    // Schließe Donate Modal sofort
-    setIsDonateModalOpen(false);
-    setSelectedCampaign(null);
-    
-    // Finde Campaign
+    // Finde Campaign zuerst
     const campaign = campaigns.find(c => c.id === campaignId);
     console.log('📋 Found campaign:', campaign);
     
@@ -116,13 +118,20 @@ const handleDonate = async (campaignId, amount) => {
     const blockchainCampaignId = campaign.blockchainId || campaign.id;
     console.log('⛓️ Using blockchain campaign ID:', blockchainCampaignId);
     
-    // Zeige Status Modal mit korrekten Parametern
+    // ✅ Schließe Donate Modal sofort (wie gewünscht)
+    setIsDonateModalOpen(false);
+    setSelectedCampaign(null);
+
+    const debugSessionId = `donation_${Date.now()}_${Math.random()}`;
+    console.log('🎯 CALLING showStatus with session:', debugSessionId);
+
+    // Zeige Status Modal
     showStatus({
       transactionType: 'donation',
       campaignTitle: campaign.title,
       amount: amount.toString(),
       smartContract: smartContract,
-      campaignId: blockchainCampaignId, // ✅ WICHTIG: Echte Campaign ID
+      campaignId: blockchainCampaignId,
       onTransactionComplete: async (result) => {
         console.log('✅ Blockchain transaction completed:', result);
         
@@ -133,8 +142,6 @@ const handleDonate = async (campaignId, amount) => {
             const newProgress = campaign.target > 0 ? ((campaign.raised + amount) / campaign.target) * 100 : 0;
             const willComplete = oldProgress < 100 && newProgress >= 100;
             
-            // ⚠️ WICHTIG: Nicht nochmal addDonation() aufrufen!
-            // Das Smart Contract hat bereits die Donation verarbeitet
             console.log('💰 Donation completed on blockchain, updating UI...');
             
             // Show celebration if campaign just got completed
@@ -145,12 +152,8 @@ const handleDonate = async (campaignId, amount) => {
             
             console.log('✅ Donation flow completed successfully');
             
-            // Campaigns werden automatisch von useCampaignManager refreshed
-            // Kein manueller addDonation() Call nötig!
-            
           } catch (error) {
             console.error('❌ Failed to update UI after donation:', error);
-            // Transaction war erfolgreich, nur UI-Update failed
             alert('Donation successful! Please refresh the page to see updates.');
           }
         }
@@ -160,6 +163,9 @@ const handleDonate = async (campaignId, amount) => {
   } catch (error) {
     console.error('❌ Failed to start donation process:', error);
     alert('Failed to start donation: ' + error.message);
+  }finally {
+    // Reset lock
+    handleDonate._isRunning = false;
   }
 };
 
